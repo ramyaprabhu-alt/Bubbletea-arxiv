@@ -1,0 +1,59 @@
+% body: 8k prompts at 2 and 4 req/s; FT throughput, then p90 TTFT and TPOT
+% in ms (serving alone, serving alone + EPLB, BubbleTea + EPLB)
+\pgfplotstableread[col sep=comma]{plots/CSVs/eplb_8k.csv}\eptable
+\input{plots/eplb_defs}
+% #1 = metric (ttft or tpot)
+\newcommand{\eplatms}[1]{%
+  \addplot[forget plot, fill=pastel8, draw=black, /pgf/bar shift=-6pt]
+    table[x expr=\coordindex, y=#1_alone]{\eptable};
+  \addplot[forget plot, fill=pastel8, draw=black, eplb hatch,
+    /pgf/bar shift=0pt]
+    table[x expr=\coordindex, y=#1_alone_eplb]{\eptable};
+  \addplot[forget plot, fill=ladderE, draw=black, eplb hatch,
+    /pgf/bar shift=6pt]
+    table[x expr=\coordindex, y=#1_bubbletea_eplb]{\eptable};
+}
+\protected\def\epticklabelk{\pgfmathtruncatemacro{\eprow}{\tick}%
+  \pgfplotstablegetelem{\eprow}{req_per_s}\of\eptable
+  \pgfmathprintnumber[precision=4]{\pgfplotsretval}}
+%\begin{groupwidth}{3}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=3 by 1, horizontal sep=40pt},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=6pt,
+      enlarge x limits=0.45,
+      width=46.04pt,
+      clip mode=individual,
+      ylabel shift=-4pt,
+      xtick={0,1}, xticklabel={\epticklabelk},
+      ymin=0,
+    ]
+
+    \nextgroupplot[ylabel={FT samples/s}, ymax=7.5, ytick={0,2,4,6},
+      legend columns=3, legend style={yshift=3pt, at={(2.2,1)},
+        anchor=south, font=\scriptsize,
+        /tikz/every even column/.append style={column sep=4pt}}]
+    \epftbar{noeplb}{-3.5pt}{}
+    \epftbar{eplb}{3.5pt}{eplb hatch}
+    \addlegendimage{area legend, fill=ladderB, draw=black}
+    \addlegendentry{\textbf{\sysname-\textsc{Flat}}}
+    \addlegendimage{area legend, fill=ladderE, draw=black}
+    \addlegendentry{\sys{}}
+    \addlegendimage{area legend, fill=pastel8, draw=black}
+    \addlegendentry{Serving alone}
+    \addlegendimage{area legend, fill=white, draw=black}
+    \addlegendentry{No EPLB}
+    \addlegendimage{area legend, fill=white, draw=black, eplb hatch}
+    \addlegendentry{With EPLB}
+
+    \nextgroupplot[ylabel={p90 TTFT (ms)}, ymax=400, ytick={0,200,400},
+      xlabel={Serving load at 8k prompts (req/s)}]
+    \eplatms{ttft}
+
+    \nextgroupplot[ylabel={p90 TPOT (ms)}, ymax=200, ytick={0,100,200}]
+    \eplatms{tpot}
+  \end{groupplot}
+\end{tikzpicture}
+%\end{groupwidth}

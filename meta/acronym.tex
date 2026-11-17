@@ -1,0 +1,26 @@
+\usepackage{acronym}
+
+\makeatletter
+\renewcommand*\AC@verridelabel[1]{}
+\makeatother
+
+% Each \ac{...} expands to the long form on first use, then the short form
+% thereafter. \acresetall (called at the top of every top-level \section in
+% main.tex) clears the "already used" flag for every acronym below, so each
+% section re-introduces the terms it uses on their first occurrence in that
+% section rather than relying on a definition several sections back.
+\acrodef{MoE}{Mixture-of-Experts}
+\acrodef{LLM}{large language model}
+\acrodef{PEFT}{parameter-efficient fine-tuning}
+\acrodef{EP}{expert parallelism}
+\acrodef{TP}{tensor parallelism}
+\acrodef{SLO}{service-level objective}
+\acrodef{TTFT}{time-to-first-token}
+\acrodef{TPOT}{time-per-output-token}
+\acrodef{GEMM}{general matrix multiplication}
+\acrodef{KV}{key-value}
+\acrodef{HBM}{high-bandwidth memory}
+\acrodef{EPLB}{expert-parallel load balancing}
+\acrodef{LPLB}{linear-programming-based load balancer}
+\acrodef{SM}{streaming multiprocessor}
+\acrodef{LoRA}{low-rank adaptation}

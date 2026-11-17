@@ -1,0 +1,52 @@
+%\begin{groupwidth}{1}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=1 by 1},
+      bar plot,
+      cycle list name=pastel bars,
+      width=214pt,
+      symbolic x coords={8k,16k,32k,64k,128k},
+      xlabel={Context length},
+      ylabel={Median bubble (ms/layer)},
+      ymax=7.6,
+      legend columns=-1,
+    ]
+
+    \nextgroupplot
+
+    \addplot+[error bars/y dir=both, error bars/y explicit]
+    table[
+      x=context_label,
+      y=qwen3_median_ms,
+      y error plus=qwen3_err_high,
+      y error minus=qwen3_err_low,
+      col sep=comma
+    ]
+    {plots/CSVs/context_bubble.csv};
+    \addlegendentry{Qwen3-30B-A3B}
+
+    \addplot+[error bars/y dir=both, error bars/y explicit]
+    table[
+      x=context_label,
+      y=qwen15moe_median_ms,
+      y error plus=qwen15moe_err_high,
+      y error minus=qwen15moe_err_low,
+      col sep=comma
+    ]
+    {plots/CSVs/context_bubble.csv};
+    \addlegendentry{Qwen1.5-MoE-A2.7B}
+
+    \addplot+[error bars/y dir=both, error bars/y explicit]
+    table[
+      x=context_label,
+      y=deepseek_median_ms,
+      y error plus=deepseek_err_high,
+      y error minus=deepseek_err_low,
+      col sep=comma
+    ]
+    {plots/CSVs/context_bubble.csv};
+    \addlegendentry{DeepSeek-V2-Lite}
+
+  \end{groupplot}
+\end{tikzpicture}
+%\end{groupwidth}

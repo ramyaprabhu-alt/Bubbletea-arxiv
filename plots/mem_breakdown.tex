@@ -1,0 +1,48 @@
+% appendix: memory of the resident BubbleTea trainer per GPU, by part
+% CSV (plots/scripts/reshape_mem_breakdown.py): one row per model, one
+% column per stacked part (GiB), bottom to top
+\pgfplotstableread[col sep=comma]{plots/CSVs/mem_breakdown.csv}\mbtable
+%\begin{groupwidth}{1}
+% two-line legend entry, centred on its key
+\newcommand{\mbtwo}[2]{\begin{tabular}{@{}l@{}}#1\\#2\end{tabular}}
+\begin{tikzpicture}
+  \begin{axis}[
+      bar plot,
+      typeset ticklabels with strut,
+      ybar stacked, /pgf/bar width=24pt, /pgf/bar shift=0pt,
+      enlarge x limits=0.5,
+      width=110.48pt,
+      ymax=6, ytick={0,1,...,5},
+      xticklabels={Qwen3-30B, DS-V2-Lite},
+      ylabel={Worker memory per GPU (GiB)},
+      % natural text depth: the shared fixed depth would cut the \mbtwo blocks
+      % centred on the axis and its two-line tick labels
+      legend style={at={(1.04,0.3)}, anchor=west, nodes={text depth=},
+        row sep=-2pt},
+      reverse legend,
+    ]
+    \addplot[fill=pastel6!50, draw=black]
+      table[x expr=\coordindex, y=lora_state]{\mbtable};
+    \addplot[fill=sysBubbleTea, draw=black]
+      table[x expr=\coordindex, y=graph_pool]{\mbtable};
+    \addplot[fill=sysBubbleTea!45, draw=black]
+      table[x expr=\coordindex, y=eager_live]{\mbtable};
+    \addplot[fill=white, draw=black]
+      table[x expr=\coordindex, y=cached]{\mbtable};
+    \addplot[fill=pastel8, draw=black]
+      table[x expr=\coordindex, y=context]{\mbtable};
+    % total on top: a zero-height segment (stacked labels sit mid-segment)
+    \addplot[forget plot, draw=none, fill=none, stacked ignores zero=false,
+      point meta=\thisrow{total},
+      nodes near coords={\pgfmathprintnumber[fixed, fixed zerofill,
+        precision=1]{\pgfplotspointmeta}\,GiB},
+      every node near coord/.append style={inner sep=1.5pt, anchor=south}]
+      table[x expr=\coordindex, y expr=0]{\mbtable};
+    \addlegendentry{\mbtwo{LoRA weights, gradients}{and AdamW moments}}
+    \addlegendentry{\mbtwo{CUDA-graph pools (saved}{activations, chunk outputs)}}
+    \addlegendentry{\mbtwo{Other live tensors (island}{inputs, exchange buffers)}}
+    \addlegendentry{Allocator cache (free)}
+    \addlegendentry{\mbtwo{Outside the allocator}{(CUDA context, kernels)}}
+  \end{axis}
+\end{tikzpicture}
+%\end{groupwidth}

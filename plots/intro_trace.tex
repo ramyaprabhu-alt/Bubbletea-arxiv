@@ -1,0 +1,38 @@
+% Data: plots/CSVs/intro_trace.csv, from BubbleTea-results/eval/intro/make_intro_trace.py code 30 with TT_RUNS=runs_cap40
+% (Azure code trace, Qwen3-30B-A3B, original rate, 30 s bins; throughput = mean of 2 reps, p90 TTFT pooled over 2 reps).
+%\begin{groupwidth}{1}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=1 by 2, vertical sep=7pt, xticklabels at=edge bottom, xlabels at=edge bottom},
+      width=200pt,
+      xmin=0, xmax=570,
+      xtick={0,100,200,300,400,500},
+      xlabel={Time into the trace (s)},
+      unbounded coords=jump,
+      every axis y label/.style={at={(axis description cs:-0.075,0.5)}, rotate=90, anchor=south, align=center, font=\scriptsize\sffamily},
+      legend style={font=\scriptsize, at={(0.5,1.03)}, anchor=south, draw=none},
+      legend columns=2, legend cell align=left,
+      legend style={/tikz/every even column/.append style={column sep=6pt},at={(0.43,1.1)}},
+    ]
+    \nextgroupplot[ylabel={Load\\(req/s)}, ymin=0, ymax=12.5, ytick={0,5,10}]
+    \addplot[const plot mark mid, fill=black!20, draw=black!50, thin, forget plot]
+      table[x=t_mid, y=arrivals_rps, col sep=comma] {plots/CSVs/intro_trace.csv} \closedcycle;
+    % p90 TTFT over the whole trace relative to serving alone (trace.json, azure_code 1x, p90_ttft_x; naive from trace_tt40.json);
+    % the per-bin TTFT panel was removed (amk).
+    \addlegendimage{bar4, thick}\addlegendentry{\sys{} (p90 TTFT 1.03$\times$)}
+    \addlegendimage{bar2, thick}\addlegendentry{LLMStation (0.96$\times$)}
+    \addlegendimage{bar6, thick}\addlegendentry{Uncoordinated colocation (1.18$\times$)}
+
+    \nextgroupplot[ylabel={FT throughput\\(samples/s)}, ymin=0, ymax=8.4, ytick={0,2,4,6,8}]
+    \addplot[bar4, thick, const plot mark mid] table[x=t_mid, y=sps_v1_min, col sep=comma] {plots/CSVs/intro_trace.csv};
+    \addplot[bar2, thick, const plot mark mid] table[x=t_mid, y=sps_llms, col sep=comma] {plots/CSVs/intro_trace.csv};
+    \addplot[bar6, thick, const plot mark mid] table[x=t_mid, y=sps_tt, col sep=comma] {plots/CSVs/intro_trace.csv};
+
+%    \nextgroupplot[ylabel={p90\\TTFT (s)}, ymin=0, ymax=1.9, ytick={0,0.5,1,1.5}]
+%    \addplot[bar2, thick, const plot mark mid] table[x=t_mid, y expr=\thisrow{p90ttft_llms}/1000, col sep=comma] {plots/CSVs/intro_trace.csv};
+%    \addplot[bar6, thick, const plot mark mid] table[x=t_mid, y expr=\thisrow{p90ttft_tt}/1000, col sep=comma] {plots/CSVs/intro_trace.csv};
+%    \addplot[bar4, thick, const plot mark mid] table[x=t_mid, y expr=\thisrow{p90ttft_v1_min}/1000, col sep=comma] {plots/CSVs/intro_trace.csv};
+%    \addplot[black!60, very thick, densely dotted, const plot mark mid] table[x=t_mid, y expr=\thisrow{p90ttft_vllm}/1000, col sep=comma] {plots/CSVs/intro_trace.csv};
+  \end{groupplot}
+\end{tikzpicture}
+%\end{groupwidth}

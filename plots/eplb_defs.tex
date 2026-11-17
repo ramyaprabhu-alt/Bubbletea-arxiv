@@ -1,0 +1,57 @@
+% shared by eplb.tex (six cells, Appendix B) and eplb_8k.tex (body); each
+% reads its own CSV into \eptable before \input-ing this file
+% hatching marks runs with EPLB enabled
+\tikzset{eplb hatch/.style={postaction={pattern=north east lines,
+  pattern color=black!50}}}
+% #1 = without (noeplb) or with (eplb) EPLB, #2 = bar shift, #3 = extra
+% style. Bar: no-harvesting throughput, plus what bubble harvesting adds;
+% a dashed outline marks throughput that harvesting costs.
+\newcommand{\epftbar}[3]{%
+  \addplot[forget plot, fill=white, draw=black, densely dashed,
+    /pgf/bar shift=#2,
+    point meta={(\thisrow{ft_#1_bubbletea}/\thisrow{ft_#1_base}-1)*100},
+    nodes near coords={\pgfmathprintnumber[fixed, precision=0,
+      print sign]{\pgfplotspointmeta}\%},
+    every node near coord/.append style={font=\tiny, inner sep=1pt,
+      solid, rotate=90, anchor=west}]
+    table[x expr=\coordindex,
+      y expr={max(\thisrow{ft_#1_base}, \thisrow{ft_#1_bubbletea})}]{\eptable};
+  \addplot[forget plot, fill=ladderE, draw=black, /pgf/bar shift=#2, #3]
+    table[x expr=\coordindex, y=ft_#1_bubbletea]{\eptable};
+  \addplot[forget plot, fill=ladderB, draw=black, /pgf/bar shift=#2, #3]
+    table[x expr=\coordindex,
+      y expr={min(\thisrow{ft_#1_base}, \thisrow{ft_#1_bubbletea})}]{\eptable};
+}
+% #1 = metric (ttft or tpot)
+\newcommand{\eplatbars}[1]{%
+  \addplot[forget plot, fill=pastel8, draw=black, /pgf/bar shift=-6pt]
+    table[x expr=\coordindex, y=#1_alone_noeplb]{\eptable};
+  % serving alone with EPLB: the baseline, 1 by definition
+  \addplot[forget plot, fill=pastel8, draw=black, eplb hatch,
+    /pgf/bar shift=0pt]
+    table[x expr=\coordindex, y expr=1]{\eptable};
+  \addplot[forget plot, fill=ladderE, draw=black, eplb hatch,
+    /pgf/bar shift=6pt]
+    table[x expr=\coordindex, y=#1_bubbletea_eplb]{\eptable};
+  % serving alone with EPLB (dashed) and +10% (dotted)
+  \draw[thin, densely dashed] ({rel axis cs:0,0} |- {axis cs:0,1})
+    -- ({rel axis cs:1,0} |- {axis cs:0,1});
+  \draw[thin, densely dotted] ({rel axis cs:0,0} |- {axis cs:0,1.1})
+    -- ({rel axis cs:1,0} |- {axis cs:0,1.1});
+}
+% separate medium from high load
+\newcommand{\epsep}{%
+  \draw[thin, black!40] ({axis cs:2.5,0} |- {rel axis cs:0,0})
+    -- ({axis cs:2.5,0} |- {rel axis cs:0,1});}
+% #1 = x of the group centre, #2 = label
+\newcommand{\epgroup}[2]{%
+  \node[anchor=north, font=\sffamily\footnotesize, yshift=-11pt]
+    at ({axis cs:#1,0} |- {rel axis cs:0,0}) {#2};}
+% tick label: prompt length @ request rate, read from the CSV row
+% (\protected: pgfplots expands tick labels before typesetting them)
+\protected\def\epticklabel{\pgfmathtruncatemacro{\eprow}{\tick}%
+  \pgfplotstablegetelem{\eprow}{prompt_tokens}\of\eptable
+  % (integer division: pgfmath overflows on 16384)
+  \edef\epk{\the\numexpr\pgfplotsretval/1024\relax}%
+  \pgfplotstablegetelem{\eprow}{req_per_s}\of\eptable
+  \epk k @ \pgfmathprintnumber[precision=4]{\pgfplotsretval}}

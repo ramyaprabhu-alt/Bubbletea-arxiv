@@ -1,0 +1,27 @@
+bubble_predict_error.csv  ->  Fig. bubble-predict-error (sections/characterization/predictability.tex)
+
+What: absolute error (ms) of the deployed slack predictor vs a static
+per-layer profile, pooled over 193,920 (prefill layer x rank) samples.
+  deployed  budget_r = 6 us x (max_q tiles_q - tiles_r),
+            tiles = sum over the rank's experts of ceil(tokens_e / 128)
+            (bubbletea/bubble_predict.py; no fitted parameters)
+  static    per-layer mean bubble of the first half of the run, all ranks
+  measured  bubble_r = all-reduce window_r - shortest window across ranks
+  errors on the second half of each run (prefill steps split by time)
+Setup: Qwen3-30B-A3B, BF16, 4x A100, TP=EP=4, vLLM serving without EPLB,
+five loads 4k@8, 8k@4, 8k@2, 12k@2, 2k@1 (tokens@QPS), 400 arXiv requests,
+32 output tokens; bubble probe (VLLM_BT_BUBBLE_PROBE), 2026-10-01.
+
+Source (RCP NFS): /mnt/nfs/home/ramya/BubbleTea-results/grid_eplb/
+  rep1/<cell>/vllm_bp/off_before/bubble_probe/probe_rank*.jsonl
+  analysis: predictor_eval.py (per cell: predictor_eval.jsonl)
+
+Notes:
+- Probe timestamps are float32 ms from the start of the run: durations
+  after ~32 s resolve to 4-8 us, so the deployed median error (8.9 us) is at
+  the measurement resolution.
+- With EPLB (vllm_eplb_bp, 4k@8 8k@4 8k@2 12k@2): median 9.5 us, p95 42.8 us
+  (static 114.0 / 299.0 us). The 2k@1 EPLB probe run is anomalous (waits not
+  explained by routing; median 278 us error) and is excluded pending a rerun.
+- bubble_predict_error_128k_ep2.csv is the earlier offline study (Qwen3,
+  TP=EP=2, 128k prefills, linear model on routed load; 3.27 ms -> 98.5 us).

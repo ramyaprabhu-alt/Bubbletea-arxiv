@@ -1,0 +1,111 @@
+\section{Characterization details}
+\label{sec:appx-char}
+
+\subsection{Dense and expert-parallel MoE layers}
+\label{sec:appx-arch}
+
+Figure~\ref{fig:appx-arch} contrasts a dense Transformer layer with an
+\ac{MoE} layer on two GPUs. Under \ac{TP}, a dense layer shards
+attention heads and feed-forward weights evenly, so every GPU performs
+the same work on all tokens and reaches each all-reduce at the same
+time. In the \ac{MoE} layer, attention is still sharded by \ac{TP}, and
+every GPU computes the same routing decision, but \ac{EP} places whole
+experts on different GPUs. Each GPU then runs only the tokens routed to
+its local experts. When the router sends more tokens to one GPU's
+experts, the other GPU finishes early and waits at the all-reduce that
+combines the expert outputs: this wait is the bubble of
+Figure~\ref{fig:anatomy}.
+
+\begin{figure}[t]
+  \centering
+  \inputplot{arch_bubble}
+  \caption{\textbf{Where expert-parallel bubbles come from.} Time runs
+    downward within each GPU. (a)~A dense layer under \ac{TP} splits
+    work evenly, so no GPU waits. (b)~An \ac{MoE} layer under
+    \ac{TP}$=$\ac{EP} places different experts on different GPUs; the
+    router sends GPU~0's experts fewer tokens (squares), so GPU~0
+    finishes early and idles until GPU~1 reaches the all-reduce that
+    combines the expert outputs. Schematic; sizes are illustrative.}
+  \label{fig:appx-arch}
+\end{figure}
+
+\subsection{Bubble size across models}
+\label{sec:appx-context}
+
+Figure~\ref{fig:context} shows how the per-layer bubble grows with
+prefill size for the three \ac{MoE} models of \S\ref{sec:char-context},
+in the default setup of \S\ref{sec:characterization}. From 8k to 128k
+tokens, the median bubble grows from 0.22 to 6.41\,ms/layer on
+Qwen3-30B-A3B, from 0.28 to 4.34\,ms/layer on Qwen1.5-MoE-A2.7B, and
+from 0.20 to 2.70\,ms/layer on DeepSeek-V2-Lite.
+
+\begin{figure}[t]
+  \centering
+   \inputplot{context_bubble}
+  \caption{
+    \textbf{Per-layer bubble duration grows with prefill size.}
+    Median bubble across three \ac{MoE} architectures under BF16
+    execution without load balancing. Error bars show min/max across
+    repetitions.
+  }
+  \label{fig:context}
+\end{figure}
+
+\subsection{Lower-precision execution}
+\label{sec:appx-fp8}
+
+Lower-precision execution attacks a different part of the problem.
+FP8 reduces the cost of expert computation, but does not change how
+the router distributes expert work across GPUs. Nor, in our measured
+regime, does it reduce expert computation enough to remove the
+compute saturation during prefill: additional routed work on one GPU
+still extends its completion time. Figure~\ref{fig:appx-fp8} compares
+BF16 and FP8 in the load-balancing setup of Figure~\ref{fig:lb-sweep}
+(DeepSeek-V2-Lite, SGLang, 8$\times$H100, \ac{EP}$=8$). At 128k,
+moving from BF16 to FP8 changes the bubble from 4.79 to 4.81\,ms/layer
+without load balancing and from 3.53 to 3.50\,ms/layer with LPLB, and
+it changes by at most 0.05\,ms/layer at every other context. Faster
+expert execution therefore does not, by itself, remove the GPU-to-GPU
+timing differences caused by uneven routed work.
+
+\begin{figure}[t]
+  \centering
+  \inputplot{precision_sweep}
+  \caption{\textbf{Lower precision leaves the bubble unchanged.}
+    Median per-layer bubble under BF16 and FP8 (hatched), without load
+    balancing (Base) and with LPLB, in the setup of
+    Figure~\ref{fig:lb-sweep}: DeepSeek-V2-Lite, SGLang, 8$\times$H100,
+    \ac{EP}$=8$. Context denotes aggregate tokens across the 8-way
+    \ac{EP} group.}
+  \label{fig:appx-fp8}
+\end{figure}
+\subsection{Bubble predictability}
+\label{sec:appx-predict}
+
+We measure how well the router's token assignment predicts each GPU's
+bubble on Qwen3-30B-A3B, served by \vllm on 4$\times$A100 with
+\ac{TP}$=$\ac{EP}$=4$ and no expert load balancing, at five loads
+(4k tokens at 8 requests/s, 8k at 4 and 2, 12k at 2, and 2k at 1;
+400 \textsc{arXiv} requests each). For every prefill layer and GPU
+(\num{193920} samples), we compare the measured bubble with two
+predictors: the deployed router-aware predictor
+(\S\ref{sec:design-predict}), and a static profile that assigns every
+GPU the mean bubble of that layer from the first half of the run. Both
+are evaluated on the second half. \Cref{fig:appx-predict} shows that
+the router-aware predictor reduces the median absolute error from
+\SI{123}{\micro\second} to \SI{8.9}{\micro\second} and the p95 from
+\SI{452}{\micro\second} to \SI{45}{\micro\second}. With \ac{EPLB}
+enabled, its median error is \SI{9.5}{\micro\second} (p95
+\SI{43}{\micro\second}). Our probe resolves durations to
+\SIrange{4}{8}{\micro\second}, so the router-aware median error is at
+the measurement resolution.
+
+\begin{figure}[t]
+  \centering
+  \inputplot{bubble_predict_error}
+  \caption{\textbf{The router's assignment predicts each GPU's bubble.}
+    Absolute error of the router-aware predictor and of a static
+    per-layer profile on Qwen3-30B-A3B, 4$\times$A100,
+    \ac{TP}$=$\ac{EP}$=4$, pooled over five serving loads.}
+  \label{fig:appx-predict}
+\end{figure}

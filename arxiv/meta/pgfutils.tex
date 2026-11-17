@@ -1,0 +1,42 @@
+\graphicspath{ {figures/} }
+\usepackage{tikz}
+\usepackage[eulergreek]{sansmath}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{cleveref}
+\usepackage{comment}
+\crefname{assumption}{assumption}{assumptions}
+
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{external,units,colorbrewer,groupplots,fillbetween,statistics}
+\usetikzlibrary{patterns,shapes.misc}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc,decorations.pathreplacing}
+
+\newcommand{\inputplot}[1]{%
+	{\sffamily\scriptsize
+	 \def\currentplot{#1}%
+	 \input{plots/#1}\unskip}%
+}
+
+\newcommand{\newgroupwidth}[2]%
+{\expandafter\xdef\csname groupwidth#1\endcsname{#2}}
+
+\def\currentplot{}
+\newsavebox{\groupwidthbox}
+\makeatletter
+\newenvironment{groupwidth}[1]%
+{\edef\groupnumber{#1}%
+	\@ifundefined{groupwidth\currentplot}{\pgfmathsetlengthmacro{\mywidth}{\linewidth/\groupnumber}}%
+	{\expandafter\let\expandafter\mywidth\csname groupwidth\currentplot\endcsname}%
+	\begin{lrbox}{\groupwidthbox}%
+		\tikzset{/pgfplots/width={\mywidth}}%
+		\ignorespaces}%
+	{\end{lrbox}%
+	\usebox\groupwidthbox
+	\@ifundefined{groupwidth\currentplot}%
+	{\pgfmathsetlengthmacro{\mywidth}{\mywidth + (\linewidth - \wd\groupwidthbox)/\groupnumber}}{}%
+	\tikzifexternalizing{}{%
+		\immediate\write\@auxout{\string\newgroupwidth{\currentplot}{\mywidth}}%
+	}}
+\makeatother
+\let\Bbbk\relax

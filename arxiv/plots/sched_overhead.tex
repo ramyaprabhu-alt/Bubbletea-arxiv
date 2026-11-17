@@ -1,0 +1,80 @@
+\pgfplotstableread[col sep=comma]{plots/CSVs/sched_overhead.csv}\sotable
+\pgfplotstableread[col sep=comma]{plots/CSVs/hook_cost.csv}\hctable
+\newcommand{\sopanel}[3]{%
+  \nextgroupplot[#3]
+  \addplot[fill=pastel8!50, draw=black, select coords between index={#1}{#2}]
+    table[x expr=\coordindex, y=p50_ttft]{\sotable};
+  \addplot[fill=pastel8, draw=black, select coords between index={#1}{#2}]
+    table[x expr=\coordindex, y=p90_ttft]{\sotable};
+  \addplot[fill=sysBubbleTea!45, draw=black,
+    select coords between index={#1}{#2}]
+    table[x expr=\coordindex, y=p50_tpot]{\sotable};
+  \addplot[fill=sysBubbleTea, draw=black, select coords between index={#1}{#2}]
+    table[x expr=\coordindex, y=p90_tpot]{\sotable};
+  \draw[thin] ({rel axis cs:0,0} |- {axis cs:0,0})
+    -- ({rel axis cs:1,0} |- {axis cs:0,0});
+}
+\protected\def\soticklabel{\pgfmathtruncatemacro{\sorow}{\tick}%
+  \pgfplotstablegetelem{\sorow}{req_per_s}\of\sotable
+  \global\let\sorate\pgfplotsretval
+  \pgfplotstablegetelem{\sorow}{load}\of\sotable
+  \pgfplotsretval\\\sorate}
+\tikzset{host hatch/.style={postaction={pattern=north east lines,
+  pattern color=black!50}}}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group name=so, group size=3 by 1, horizontal sep=6pt,
+        y descriptions at=edge left},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=4pt,
+      enlarge x limits=0.22,
+      width=98.1pt,
+      title style={yshift=-3pt},
+      ymin=-10, ymax=10, ytick={-10,-5,0,5,10},
+      xticklabel={\soticklabel},
+      xticklabel style={align=center},
+      ylabel style={align=center},
+    ]
+    \sopanel{0}{2}{title={Qwen3-30B-A3B},
+      ylabel={Latency change vs\\serving alone (\%)}}
+    \sopanel{3}{5}{title={Qwen1.5-MoE-A2.7B},
+      xlabel={Serving load and request rate (req/s)},
+      legend columns=-1,
+      legend style={yshift=14pt,
+        /tikz/every even column/.append style={column sep=3pt}}}
+    \addlegendentry{p50 TTFT}
+    \addlegendentry{p90 TTFT}
+    \addlegendentry{p50 TPOT}
+    \addlegendentry{p90 TPOT}
+    \sopanel{6}{9}{title={DeepSeek-V2-Lite}, enlarge x limits=0.16}
+  \end{groupplot}
+
+  \begin{axis}[
+      at={($(so c3r1.south east)+(48pt,0)$)}, anchor=south west,
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=7pt,
+      enlarge x limits=0.22,
+      width=90pt,
+      title style={yshift=-3pt},
+      title={Hook cost (one A100, idle)},
+      ymax=200, ytick={0,50,100,150,200},
+      xticklabels={Qwen3, Qwen1.5, DeepSeek},
+      ylabel={$\mu$s per prefill\\MoE layer},
+      ylabel style={align=center},
+      nodes near coords={\pgfmathprintnumber[fixed, precision=0]%
+        {\pgfplotspointmeta}},
+      every node near coord/.append style={font=\tiny, inner sep=1.5pt},
+      legend columns=-1,
+      legend style={at={(0.5,1.03)}, anchor=south, yshift=14pt,
+        /tikz/every even column/.append style={column sep=3pt}},
+    ]
+    \addplot[fill=sysBubbleTea, draw=black]
+      table[x expr=\coordindex, y=gpu_us]{\hctable};
+    \addplot[fill=sysBubbleTea, draw=black, host hatch]
+      table[x expr=\coordindex, y=host_us]{\hctable};
+    \addlegendentry{GPU}
+    \addlegendentry{Host}
+  \end{axis}
+\end{tikzpicture}

@@ -1,0 +1,23 @@
+\input{plots/sources_defs}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=1 by 1},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=4pt,
+      enlarge x limits=0.25,
+      width=120.10pt,
+      xticklabel={\srcticklabel},
+      ymax=6, ytick={0,2,4,6},
+      ylabel={FT samples/s},
+    ]
+
+    \srcpanel{3}{
+      xlabel={Serving load: low, medium, high (req/s)},
+      legend columns=1,
+      legend style={at={(1.04,0.5)}, anchor=west}}
+    \addlegendentry{Decode colocation (DC)}
+    \addlegendentry{\textbf{\sysname-\textsc{Flat}}}
+    \addlegendentry{\sys{}}
+  \end{groupplot}
+\end{tikzpicture}

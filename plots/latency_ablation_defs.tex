@@ -1,0 +1,58 @@
+% shared by latency_ablation.tex (4k/8k/16k, Appendix B) and
+% latency_ablation_4k.tex (body); CSV rows: prompt length x load, a panel
+% plots 3 rows (low, medium, high load)
+\pgfplotstableread[col sep=comma]{plots/CSVs/latency_ablation.csv}\labtable
+% value printed beside bars clipped at the top of the axis (> 2x)
+\protected\def\labcliplabel{%
+  \pgfkeys{/pgf/fpu=true, /pgf/fpu/output format=fixed}%
+  \pgfmathparse{\pgfplotspointmeta}\let\labv\pgfmathresult
+  \pgfkeys{/pgf/fpu=false}%
+  \ifdim\labv pt>2pt
+    \pgfmathprintnumber[fixed, fixed zerofill, precision=1]{\labv}$\times$%
+  \fi}
+% #1 = first CSV row of the panel, #2 = metric (ft, ttft or tpot),
+% #3 = panel options
+\newcommand{\labpanel}[3]{%
+  \nextgroupplot[#3]
+  \addplot[fill=ladderB, draw=black, point meta=\thisrow{b_#2},
+    select coords between index={#1}{\numexpr#1+2\relax}]
+    table[x expr=\coordindex, y=b_#2]{\labtable};
+  \addplot[fill=ladderC, draw=black, point meta=\thisrow{c_#2},
+    select coords between index={#1}{\numexpr#1+2\relax}]
+    table[x expr=\coordindex, y=c_#2]{\labtable};
+  \addplot[fill=ladderD, draw=black, point meta=\thisrow{d_#2},
+    select coords between index={#1}{\numexpr#1+2\relax}]
+    table[x expr=\coordindex, y=d_#2]{\labtable};
+  \addplot[fill=ladderE, draw=black, point meta=\thisrow{e_#2},
+    select coords between index={#1}{\numexpr#1+2\relax}]
+    table[x expr=\coordindex, y=e_#2]{\labtable};
+}
+% serving alone (dashed) and +10% (dotted)
+\newcommand{\labreflines}{%
+  \draw[thin, densely dashed] ({rel axis cs:0,0} |- {axis cs:0,1})
+    -- ({rel axis cs:1,0} |- {axis cs:0,1});
+  \draw[thin, densely dotted] ({rel axis cs:0,0} |- {axis cs:0,1.1})
+    -- ({rel axis cs:1,0} |- {axis cs:0,1.1});
+}
+% tick label: request rate, read from the CSV row
+% (\protected: pgfplots expands tick labels before typesetting them)
+\protected\def\labticklabel{\pgfmathtruncatemacro{\labrow}{\tick}%
+  \pgfplotstablegetelem{\labrow}{req_per_s}\of\labtable
+  \pgfmathprintnumber[precision=4]{\pgfplotsretval}}
+\pgfplotsset{
+  % throughput row
+  labft/.style={ymax=6, ytick={0,2,4,6}},
+  % latency rows, relative to serving alone; bars above 2x stop at the top
+  % of the axis, value printed beside
+  labratio/.style={ymin=0.6, ymax=2, ytick={1,1.5,2},
+    restrict y to domain*=0:2,
+    nodes near coords={\labcliplabel},
+    every node near coord/.append style={font=\tiny, rotate=90,
+      anchor=south east, inner xsep=0.5pt, inner ysep=2.5pt}},
+}
+% legend entries, in plot order
+\newcommand{\lablegend}{%
+  \addlegendentry{\textbf{\sysname-\textsc{Flat}}}
+  \addlegendentry{Unconstrained scheduling}
+  \addlegendentry{Constrained scheduling}
+  \addlegendentry{\sys{}}}

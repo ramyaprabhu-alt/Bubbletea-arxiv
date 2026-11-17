@@ -1,0 +1,44 @@
+\input{plots/naive_sweep_defs}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=7 by 3, horizontal sep=6pt,
+        vertical sep=16pt, y descriptions at=edge left},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=3.5pt,
+      enlarge x limits=0.25,
+      width=59.61pt, height=1.15cm,
+      title style={yshift=-3pt},
+      xticklabel={\nsticklabel},
+      ylabel style={align=center},
+      label left/.style={}, label right/.style={},
+    ]
+
+    \nspanel{0}{}{title={1k prompts}, ymax=0.6, ylabel={Qwen3-30B\\FT samples/s}}
+    \nspanel{3}{}{title={2k prompts}, ymax=0.6}
+    \nspanel{6}{}{title={4k prompts}, ymax=0.6}
+    \nspanel{9}{}{title={8k prompts}, ymax=0.6, legend columns=-1,
+      legend style={yshift=14pt,
+        /tikz/every even column/.append style={column sep=3pt}}}
+    \nslegend
+    \nspanel{12}{}{title={16k prompts}, ymax=0.6}
+    \nspanel{15}{}{title={24k prompts}, ymax=0.6}
+    \nspanel{18}{}{title={32k prompts}, ymax=0.6}
+
+    \nspanel{21}{}{ymax=1.6, ylabel={Qwen1.5-MoE\\FT samples/s}}
+    \nspanel{24}{}{ymax=1.6}
+    \nspanel{27}{}{ymax=1.6}
+    \nspanel{30}{}{ymax=1.6}
+    \nspanel{33}{}{ymax=1.6}
+    \nspanel{36}{}{ymax=1.6}
+    \nspanel{39}{}{ymax=1.6}
+
+    \nspanel{42}{}{ymax=2.0, ylabel={DS-V2-Lite\\FT samples/s}}
+    \nspanel{45}{}{ymax=2.0}
+    \nspanel{48}{}{ymax=2.0}
+    \nspanel{51}{}{ymax=2.0, xlabel={Serving load: low, medium, high (req/s)}}
+    \nspanel{54}{}{ymax=2.0}
+    \nspanel{57}{}{ymax=2.0}
+    \nspanel{60}{}{ymax=2.0}
+  \end{groupplot}
+\end{tikzpicture}

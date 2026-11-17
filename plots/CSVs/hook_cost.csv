@@ -1,0 +1,4 @@
+model,gpu_us,host_us
+Qwen3-30B-A3B,9.981,135.870
+Qwen1.5-MoE-A2.7B,10.183,129.117
+DeepSeek-V2-Lite,9.979,131.040

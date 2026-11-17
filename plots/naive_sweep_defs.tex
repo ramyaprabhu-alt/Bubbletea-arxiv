@@ -1,0 +1,40 @@
+% shared by naive_sweep_tput.tex and naive_sweep_lat.tex (Appendix B.2)
+% CSV (plots/scripts/make_e2e_csvs.py): same row order as ft_throughput.csv
+\input{plots/e2e_latency_defs}% latgrid style and clipped-bar labels
+\pgfplotstableread[col sep=comma]{plots/CSVs/naive_sweep.csv}\nstable
+% #1 = first CSV row of the panel, #2 = column suffix (empty for samples/s,
+% _ttft, _tpot), #3 = panel options
+\newcommand{\nspanel}[3]{%
+  \nextgroupplot[#3]
+  \addplot[fill=sysNaiveCap, draw=black,
+    select coords between index={#1}{\numexpr#1+2\relax},
+    point meta=\thisrow{naive6#2}, label left,
+    % further left when the 40% label (also left) covers this bar
+    visualization depends on={\thisrow{naive40#2} \as \nsforty},
+    every node near coord/.append style={/utils/exec={%
+      \ifdim\nsforty pt>2pt \pgfkeysalso{/tikz/yshift=5pt}\fi}}]
+    table[x expr=\coordindex, y=naive6#2]{\nstable};
+  \addplot[fill=sysNaive40, draw=black,
+    select coords between index={#1}{\numexpr#1+2\relax},
+    point meta=\thisrow{naive40#2}, label left]
+    table[x expr=\coordindex, y=naive40#2]{\nstable};
+  \addplot[fill=sysNaive, draw=black,
+    select coords between index={#1}{\numexpr#1+2\relax},
+    point meta=\thisrow{naivenone#2},
+    % left of the bar (a right label at medium load hits the next group),
+    % unless the 40% bar it would cover is tall or the 6% label is there
+    visualization depends on={\thisrow{naive40#2} \as \nsforty},
+    visualization depends on={\thisrow{naive6#2} \as \nssix},
+    every node near coord/.append style={/utils/exec={%
+      \ifdim\nsforty pt>1.6pt \pgfkeysalso{/tikz/anchor=north east}%
+      \else\ifdim\nssix pt>2pt \pgfkeysalso{/tikz/anchor=north east}%
+      \else \pgfkeysalso{/tikz/anchor=south east}\fi\fi}}]
+    table[x expr=\coordindex, y=naivenone#2]{\nstable};
+}
+\protected\def\nsticklabel{\pgfmathtruncatemacro{\nsrow}{\tick}%
+  \pgfplotstablegetelem{\nsrow}{req_per_s}\of\nstable
+  \pgfmathprintnumber[precision=2]{\pgfplotsretval}}
+\newcommand{\nslegend}{%
+  \addlegendentry{\Uncoord (6\% cap)}
+  \addlegendentry{\Uncoord (40\% cap)}
+  \addlegendentry{\Uncoord (no cap)}}

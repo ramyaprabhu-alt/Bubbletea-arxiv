@@ -1,0 +1,199 @@
+\DeclareRobustCommand{\dstep}[1]{{\tikzexternaldisable\tikz[baseline=(s.base)]
+  \node[circle, draw, inner sep=0.5pt, font=\tiny\bfseries] (s) {#1};}}
+
+\section{Design of \sys{}}
+\label{sec:design}
+%\oana{you never mention observation 2.}
+
+Observations~1 and 2 establish that bubbles expose usable GPU capacity even after token load balancing. Observation~3 establishes two requirements for using this capacity:
+\begin{enumerate*}[label=(\roman*)]
+    \item admission must be decided per GPU and \ac{MoE} layer from the router state; and
+    \item fine-tuning must expose work short enough to fit inside the resulting bubbles, which determines how much of each bubble can be used (Appendix~\ref{sec:appx-gap}).
+\end{enumerate*}
+
+\sys{} addresses these requirements in two phases.
+During the \emph{offline phase}, a fine-tuning compiler transforms the \ac{LLM} already used by the serving engine into a fine-tuning runtime (\S\ref{sec:design-compiler}).
+Specifically, it derives the \ac{LoRA} backward pass over the same base weights, makes cross-GPU dependencies explicit, and partitions the remaining computation into \emph{fine-tuning chunks}, which are independently admissible units of GPU work. Sequences of these chunks and their dependency waits are captured as \textsc{CUDA} graphs so that they can be efficiently launched.
+
+During the \emph{online phase}, \sys uses each request's current \ac{MoE} router token assignment to predict the bubble duration on every GPU, then admits the precompiled fine-tuning work only inside those predicted bubbles (\S\ref{sec:design-window}).
+As \Cref{fig:design-overview} shows, each GPU runs two processes: a \emph{serving worker} and a \emph{fine-tuning worker}.
+A device-side gate lets the serving worker open and close an admission \emph{window} inside each GPU's bubble, while the fine-tuning worker keeps eligible work queued behind the gate.
+The serving worker closes admission early enough that fine-tuning does not delay the serving-critical GPU, and the fine-tuning worker keeps work ready despite cross-GPU dependencies.
+
+%-------------------------------------------------------------------------------
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{\inputplot{design_overview_a}}
+\caption{\textbf{The system architecture of \sys.} On each GPU, a serving worker and a fine-tuning worker run side by side and share the same copy of the base model weights.}
+\label{fig:design-overview}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{\inputplot{schedule_timeline}}
+\caption{\textbf{Scheduling fine-tuning work with \sys on one \ac{MoE} prefill layer.}
+Uneven expert work gives each GPU a different predicted bubble.
+GPUs that finish early (GPU 0 and 1) execute queued chunks of work until shortly before the bubble ends; the most-loaded GPU (GPU 2) admits none.}
+\label{fig:bubble_schedule}
+\end{figure}
+
+\subsection{\sys{} by example}
+\label{sec:design-overview}
+
+\Cref{fig:bubble_schedule} shows how \sys schedules fine-tuning work during one \ac{MoE} prefill layer across three GPUs.
+\sys predicts each GPU's bubble directly from the router's expert assignment.
+%The router assigns each GPU a different amount of expert work and \sys first predicts the size of each GPU's bubble directly from this assignment.
+As soon as a GPU's experts finish, \sys runs queued chunks (derived with our compiler) back to back inside its bubble.
+Because a running chunk cannot be preempted, \sys stops admitting new chunks a margin $m$ before the predicted end of the bubble, so that no chunk is still running when the all-reduce starts, which would prolong inference.
+
+As a result, GPU~0 in \Cref{fig:bubble_schedule}, which has the largest bubble, executes more chunks than GPU~1, and GPU~2 has no bubble and runs no fine-tuning work at all.
+Thus, fine-tuning progresses unevenly across GPUs.
+In practice, we set $m$ to \SI{60}{\micro\second}, as described in Appendix \ref{sec:appx-margin}.
+
+%-------------------------------------------------------------------------------
+\subsection{Offline phase: deriving fine-tuning work}
+
+\label{sec:design-compiler}
+
+% \oana{I feel like this is the part where a lot of our novelty and difficulty in solving this problem is and it is buried on page 6 :( Let's think about how to bring some of this into the introduction and hint at it from the beginning of the design section.}
+
+\paragraph{Why off-the-shelf autograd does not suffice.}
+The technical challenge is to execute the \ac{LoRA} backward pass inside the serving deployment within bubbles.
+Training frameworks such as \textsc{PyTorch} derive the backward pass automatically with \emph{autograd}: during the forward pass, they record each operation and keep the intermediate results it needs, and then traverse this record in reverse to compute the gradients.
+Applying autograd to the served model fails in three ways.
+\begin{enumerate*}[label=(\roman*)]
+    \item \emph{The serving forward cannot be differentiated.} For speed, the serving engine (\vllm~\cite{vllm} in our case) runs expert computation, attention, and cross-GPU communication with specialized kernels that only produce outputs: they keep no intermediate results and have no backward pass, so autograd cannot run through them.
+    Running autograd on a second, trainable copy of the model instead, as \textsc{torchtune} does in \uncoord, duplicates the \ac{LLM} weights.
+    This takes another 15\,GB memory per GPU for \textsc{Qwen3-30B-A3B} that serving could otherwise use for the \ac{KV} cache.
+    \item \emph{The backward pass is too coarse.} A bubble lasts under a millisecond and a kernel cannot be interrupted once started, so fine-tuning may only start work that finishes before the bubble ends.
+    Autograd, however, runs the whole backward pass at once, one operator at a time, and a single expert matrix multiplication over a sample's tokens can already outlast a bubble. Even when work fits, larger units leave more of each bubble unused (\S\ref{sec:appx-gap}).
+    \item \emph{The backward pass advances in lockstep.}
+    Each GPU gets a different bubble, but the backward pass exchanges gradients across GPUs at every layer, and each exchange waits until all GPUs reach it.
+    GPUs with large bubbles therefore sit idle at each exchange until the GPU with the least bubble time catches up, so most of the bubble capacity goes unused.
+\end{enumerate*}
+
+Existing colocation systems do not close this gap for expert-parallel \ac{MoE} models.
+\llmstation splits training into suspendable tasklets, but at layer granularity with a host synchronization after each (\S\ref{sec:eval-e2e}).
+Its fusion engine also assumes dense projections, which expert-parallel \ac{MoE} does not have, and fixed weight placement on GPUs, which \ac{EPLB} further breaks by moving experts across GPUs.
+%\llmstation splits training into suspendable tasklets, but at layer granularity with a host synchronization after each (\S\ref{sec:eval-e2e}), and its fusion engine assumes dense projections with fixed weight placement, which expert-parallel \ac{MoE} with EPLB does not have (Appendix~\ref{sec:appx-setup}).
+
+
+\paragraph{Deriving a bubble-compatible fine-tuning runtime.}
+% \jchen{I think a figure showing the training execution across GPUs would help here. Figures 4 and 5 explain when training is admitted, but not what are the components of training work or how it progresses and synchronizes across GPUs. Could we show the forward/backward chunks, cross-GPU exchanges and waits, and how the paired chains contribute to one optimizer step?}
+\sys{} addresses the three limitations above directly through the following three innovations.
+\begin{enumerate*}[label=(\roman*)]
+    \item \emph{Differentiate the serving \ac{LLM} in place.}
+    It replaces inference-only operations with differentiable equivalents over the same serving weights and uses \textsc{AOTAutograd} to derive the backward graph, preserving the serving \ac{LLM}'s \ac{TP}/\ac{EP} layout and expert placement.
+    \item \emph{Partition backward into bubble-sized work.}
+    \sys makes cross-GPU exchanges explicit and partitions the remaining compute with a roofline cost model into chunks of at most \SI{50}{\micro\second}, splitting operators such as grouped expert \acp{GEMM} when necessary.
+    Chunks are compiled with \textsc{Inductor} and sequences of gated chunks are captured in CUDA graphs to amortize launch overhead.
+    %Models reuse the same operation lowerings; Appendix~\ref{sec:appx-compiler} describes coverage and how new operations are added.
+    Cross-GPU exchanges are annotated as communication chunks.
+    \item \emph{Allow uneven progress across GPUs.}
+    Instead of making every GPU wait for all others at each cross-GPU exchange, \sys lets a GPU wait only for the data it needs to keep progressing.
+    One-sided mailbox messages make this possible: a GPU writes its data into a peer's mailbox in GPU memory and continues immediately.
+    A GPU with larger bubbles can thus run ahead, while one with smaller bubbles falls a few chunks behind and catches up in later bubbles.
+\end{enumerate*}
+We provide additional details on our compiler passes in \S\ref{sec:appx-compiler}.
+
+%By deriving communication and computation chunks offline, we now have bubble-sized work that can be scheduled online. 
+
+
+
+%-------------------------------------------------------------------------------
+
+\subsection{Online phase: Predicting and admitting work}
+\label{sec:design-window}
+
+At runtime, \sys uses the current \ac{MoE} routing decision to predict how long the bubble on each GPU will last and then schedules the precompiled fine-tuning work only inside those bubbles.
+We next explain this process.
+
+\paragraph{Predicting each GPU's bubble.}
+\label{sec:design-predict}
+In an \ac{EP} deployment, every GPU observes the full top-$k$ assignment, so it can directly estimate the expert work assigned to every GPU.
+\sys introduces a predictor that estimates bubble durations from this assignment (Step 2 in \Cref{fig:design-overview}).
+The serving engine computes all experts on a GPU with one grouped matrix-multiplication kernel, which processes each expert's tokens in \emph{tiles}: fixed-size blocks of $M$ tokens that each take roughly the same time.
+An expert $e$ with $n_e$ routed tokens therefore needs $\lceil n_e/M\rceil$ tiles, and the predictor sums these tile counts over the experts placed on each GPU.
+%With \ac{EPLB}, the router identifies the physical expert replica selected for each token, so \sys simply computes the tile counts over physical expert slots.
+% Then, the predicted bubble duration for GPU $g$ is:
+% \[
+%   \mathit{bubble}_g =
+%   \alpha\left(\max_j \mathit{tiles}_j-\mathit{tiles}_g\right),
+% \]
+% The predicted bubble duration for GPU $g$ is then $\mathit{bubble}_g = \alpha(\max_j \mathit{tiles}_j - \mathit{tiles}_g)$, where $\alpha$ is the execution time of a single tile.
+% Thus, the most-loaded GPU has a bubble duration of zero, while GPUs with less expert work have a bubble proportional to how much earlier they are predicted to finish.
+% We experimentally derive $\alpha$ once per model and GPU configuration from a profiling run.
+% Porting the \sys bubble predictor to different hardware or \ac{GEMM} kernels only requires using the corresponding tile height $M$ and re-estimating $\alpha$.
+The predicted bubble duration for GPU $g$ is then $\mathit{bubble}_g = \alpha(\max_j \mathit{tiles}_j - \mathit{tiles}_g)$, where $\alpha$ is the execution time of a single tile, so the most-loaded GPU has no bubble.
+We derive $\alpha$ once per model and GPU configuration from a profiling run; porting the predictor to other hardware or \ac{GEMM} kernels only requires setting the corresponding tile height $M$ and re-estimating $\alpha$.
+
+%On an A100 GPU and BF16 precision, \vllm's \ac{MoE} kernel uses $M=128$ for the prefills whose bubbles \sys fills.
+%Furthermore, $\alpha$ is \SI{6}{\micro\second} per tile for \textsc{Qwen3-30B-A3B} and
+%\SI{11}{\micro\second} per tile for Qwen1.5-MoE-A2.7B.
+
+The predictor runs as a small GPU kernel immediately after routing and keeps its result in device memory for the admission gate.
+Our predictor estimates bubble durations accurately and efficiently.
+Its median error is \SI{8.9}{\micro\second}, about 7\% of the median bubble duration at a layer (\S\ref{sec:appx-predict}), and its serving-path overhead is at most 0.5\% (\S\ref{sec:eval-overheads}).
+For prefills with little computation, however, the available bubbles are too small to justify the prediction and gating overhead.
+For prompts with 2k tokens, enabling bubble filling reduces fine-tuning throughput by 8--11\% (\S\ref{sec:appx-threshold}).
+\sys{} therefore disables bubble filling below 4k tokens and leaves those requests to conventional decode and idle-time colocation.
+
+%Our experiments show that there is an \SI{8.9}{\micro\second} median error, which is approximately 7\% of the median bubble duration at a layer (\S\ref{sec:appx-predict}).
+
+\paragraph{Admitting work inside the predicted bubble.}
+Each GPU has a gate flag in device memory that the serving worker sets and clears.
+The fine-tuning worker enqueues the precompiled CUDA graphs ahead of time; each fine-tuning chunk waits on this gate before it executes.
+The wait is a device-side stream wait and consumes no GPU compute.
+When a GPU finishes its local expert computation and reaches the layer's gather operation, the serving stream opens its gate (Step 4 in \Cref{fig:design-overview}), allowing already-queued fine-tuning chunks to execute in the bubble.
+Opening the gate is a single flag write, so serving never waits for fine-tuning: fine-tuning chunks wait on serving, never the reverse, and run only while the GPU would otherwise sit idle in its bubble.
+
+\paragraph{Keeping work ready.}
+\label{sec:design-chunk}
+A bubble is only useful if a chunk can start the moment it opens.
+A chunk can start only when its gate is open and its inputs have arrived, and some inputs come from cross-GPU exchanges with a slower GPU.
+If the host waited for each such message, the dependent chunk would reach the GPU only after a host round trip, which is a significant fraction of a sub-millisecond bubble.
+%If the host waited for each such message before launching the next chunk, the dependent chunk would reach the GPU only after a host round trip, which is a significant fraction of a sub-millisecond bubble.
+\sys instead resolves these dependencies on the device (\emph{device-side readiness}).
+The host queues all chunks ahead of time, and the stream waits on the sending GPU's mailbox flag before each dependent chunk.
+This wait occupies no SMs, so the chunk starts as soon as both its input and its gate are ready, without host involvement.
+
+% A window is useful only if a chunk is ready to run when it opens.
+% Fine-tuning work can become temporarily unavailable because a sample is waiting on a cross-GPU exchange with a lagging GPU.
+% If the host waited for each peer message, it could not queue work past the exchange, and the next bubble would find nothing to run even after the lagging GPU caught up.
+% \sys therefore makes these waits device-side (\emph{device-side readiness}): the consumer's stream waits on the
+% peer's mailbox flag, using no compute, while the host keeps queueing later chunks behind their gates, so they start as soon as their input arrives.
+
+We call the ordered sequence of compute and communication chunks for one fine-tuning sample a \emph{fine-tuning chain}.
+A chain whose next chunk waits on a lagging GPU still cannot use an open bubble.
+\sys therefore keeps a second, independent fine-tuning chain in flight (\emph{paired chains}), with its own stream, buffers, and mailboxes.
+While one fine-tuning chain is blocked on an exchange, the other can run its chunks, and both chains' gradients are accumulated into one optimizer step.
+Because two concurrent chains increase contention for memory bandwidth, \sys runs them concurrently only when prefill took less than 70\% of the last second.
+Otherwise, it serializes their execution.
+
+% Even so, a sample that is stalled on an exchange cannot use the current bubble.
+% \sys therefore keeps a second, independent fine-tuning sample in flight (\emph{paired chains}), with separate
+% buffers, streams, and mailboxes, so one fine-tuning chain can use a bubble while the other is blocked; the two samples' gradients are averaged at the optimizer step.
+% \sys runs the two chains concurrently only while serving has headroom, as measured by a one-second moving average over
+% recent serving steps; under load, the second chain starts each sample only after the first has finished its own, so the extra fine-tuning parallelism does not compete with serving.
+
+\paragraph{Closing the window early.}
+\label{sec:design-optC}
+Because an admitted chunk cannot be preempted, one admitted near the end of a bubble may delay the all-reduce and thus increase inference latency.
+\sys therefore stops admitting new chunks a margin $m$ before the predicted end of each bubble (\emph{early close}).
+If GPU $g$ opens its gate at time $t_{\mathrm{open}}$, it closes the gate at $t_{\mathrm{close}} = t_{\mathrm{open}} + \mathit{bubble}_g - m $, where $\mathit{bubble}_g$ is its predicted bubble length.
+A side-stream kernel closes the gate at $t_{\mathrm{close}}$, while completion of the serving all-reduce also clears it as a safeguard if the true bubble ends earlier than predicted.
+No window is opened for bubbles shorter than $m$, so the most-loaded GPU never admits work.
+We use $m=\SI{60}{\micro\second}$, chosen to exceed a typical fine-tuning chunk and absorb prediction error (\S\ref{sec:appx-margin}). 
+% larger margins trade bubble utilization for additional serving isolation (\S\ref{sec:appx-margin}).
+
+% \paragraph{Short prefills, decode, and idle time.}
+% For very short prefills, the available windows are too small to justify
+% prediction and admission overheads. \sys{} therefore skips bubble
+% filling in prefill steps with fewer than 4k tokens; at 2k tokens,
+% enabling it instead reduces fine-tuning throughput by 8--11\%
+% (Appendix~\ref{sec:appx-threshold}).
+
+The same precompiled fine-tuning work and device-side gate are reused for conventional decode and idle-time colocation.
+Only the admission bound differs: during prefill, each GPU's gate is limited by its router-predicted intra-layer bubble; during decode steps and idle periods, serving leaves capacity unused, so the gate stays open for the whole step.
+This is the iteration-level colocation that existing systems such as \llmstation~\cite{llmstation} already perform.

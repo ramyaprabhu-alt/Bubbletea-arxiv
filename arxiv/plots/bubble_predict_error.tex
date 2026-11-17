@@ -1,0 +1,27 @@
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=1 by 1},
+      bar plot,
+      typeset ticklabels with strut,
+      cycle list name=pastel bars,
+      width=204.5pt,
+      symbolic x coords={Median abs. error,p95 abs. error},
+      ymode=log,
+      log ticks with fixed point,
+      ymin=0.001, log origin=infty,
+      ytick={0.01,0.1},
+      ylabel={Absolute error (ms)},
+      enlarge x limits=0.4,
+      legend columns=-1,
+      legend style={/tikz/every even column/.append style={column sep=3pt}},
+    ]
+
+    \nextgroupplot
+    \addplot+ table[x=metric, y=static,
+    col sep=comma]{plots/CSVs/bubble_predict_error.csv};
+    \addlegendentry{Static per-layer profile}
+    \addplot+ table[x=metric,
+    y=router_aware, col sep=comma]{plots/CSVs/bubble_predict_error.csv};
+    \addlegendentry{Router-aware}
+  \end{groupplot}
+\end{tikzpicture}

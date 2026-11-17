@@ -1,0 +1,73 @@
+model,prompt_tokens,load_level,req_per_s,system,p90_tpot_over_serving_alone,reference,reps
+Qwen3-30B-A3B,1024,low,4.0,LLMStation,1.0255776791634996,grid_eplb/s62v5:llms_vllm,2
+Qwen3-30B-A3B,1024,med,8.0,LLMStation,1.0113081364803782,grid_eplb/s62v5:llms_vllm,2
+Qwen3-30B-A3B,1024,high,16.0,LLMStation,0.9277760886836344,grid_eplb/s62v5:llms_vllm,2
+Qwen3-30B-A3B,1024,low,4.0,Naive colocation (6% cap),1.0070945025580678,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,1024,med,8.0,Naive colocation (6% cap),1.1165825786275814,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,1024,high,16.0,Naive colocation (6% cap),1.0271264932852648,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,1024,low,4.0,Naive colocation (no cap),1.096568785078903,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,1024,med,8.0,Naive colocation (no cap),1.1768592859362508,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,1024,high,16.0,Naive colocation (no cap),1.1754453561249825,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,1024,low,4.0,BubbleTea,1.0574347810469384,grid_eplb/s62v5:vllm,2
+Qwen3-30B-A3B,1024,med,8.0,BubbleTea,1.0811868599199868,grid_eplb/s62v5:vllm,2
+Qwen3-30B-A3B,1024,high,16.0,BubbleTea,1.0489635531704466,grid_eplb/s62v5:vllm,2
+Qwen3-30B-A3B,2048,low,3.0,LLMStation,1.010881450668829,grid_eplb/s62v5:llms_vllm,2
+Qwen3-30B-A3B,2048,med,6.0,LLMStation,0.9969112731015292,grid_eplb/s62v5:llms_vllm,2
+Qwen3-30B-A3B,2048,high,12.0,LLMStation,0.9331374868150623,grid_eplb/s62v5:llms_vllm,2
+Qwen3-30B-A3B,2048,low,3.0,Naive colocation (6% cap),1.032971371219612,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,2048,med,6.0,Naive colocation (6% cap),1.0200868246417183,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,2048,high,12.0,Naive colocation (6% cap),1.086651511960823,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,2048,low,3.0,Naive colocation (no cap),1.0932151904701135,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,2048,med,6.0,Naive colocation (no cap),1.2095264352456174,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,2048,high,12.0,Naive colocation (no cap),1.3104754576549693,grid_eplb/s62v5:vllm,1
+Qwen3-30B-A3B,2048,low,3.0,BubbleTea,1.108988864956487,grid_eplb/s62v5:vllm,2
+Qwen3-30B-A3B,2048,med,6.0,BubbleTea,1.0650825857591137,grid_eplb/s62v5:vllm,2
+Qwen3-30B-A3B,2048,high,12.0,BubbleTea,1.057334198385309,grid_eplb/s62v5:vllm,2
+Qwen1.5-MoE-A2.7B,1024,low,8.0,LLMStation,1.0629809957773433,grid_qwen15/s62v5:llms_vllm,2
+Qwen1.5-MoE-A2.7B,1024,med,24.0,LLMStation,0.9772648394090769,grid_qwen15/s62v5:llms_vllm,2
+Qwen1.5-MoE-A2.7B,1024,high,32.0,LLMStation,1.0035316586350556,grid_qwen15/s62v5:llms_vllm,2
+Qwen1.5-MoE-A2.7B,1024,low,8.0,Naive colocation (6% cap),0.9168151891697561,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,1024,med,24.0,Naive colocation (6% cap),1.0270506315878776,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,1024,high,32.0,Naive colocation (6% cap),1.0100737118143321,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,1024,low,8.0,Naive colocation (no cap),1.0406574668908761,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,1024,med,24.0,Naive colocation (no cap),1.229516665845694,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,1024,high,32.0,Naive colocation (no cap),1.2321674875879443,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,1024,low,8.0,BubbleTea,1.0393195980418328,grid_qwen15/s62v5:vllm,2
+Qwen1.5-MoE-A2.7B,1024,med,24.0,BubbleTea,1.0504416861568326,grid_qwen15/s62v5:vllm,2
+Qwen1.5-MoE-A2.7B,1024,high,32.0,BubbleTea,1.0684636976640525,grid_qwen15/s62v5:vllm,2
+Qwen1.5-MoE-A2.7B,2048,low,6.0,LLMStation,1.0633740556937634,grid_qwen15/s62v5:llms_vllm,2
+Qwen1.5-MoE-A2.7B,2048,med,18.0,LLMStation,1.0166648184522178,grid_qwen15/s62v5:llms_vllm,2
+Qwen1.5-MoE-A2.7B,2048,high,24.0,LLMStation,1.0790309120039003,grid_qwen15/s62v5:llms_vllm,2
+Qwen1.5-MoE-A2.7B,2048,low,6.0,Naive colocation (6% cap),0.9771046834903752,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,2048,med,18.0,Naive colocation (6% cap),1.0330677577128062,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,2048,high,24.0,Naive colocation (6% cap),1.0783736311739185,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,2048,low,6.0,Naive colocation (no cap),1.1237843915340688,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,2048,med,18.0,Naive colocation (no cap),1.2782261123780156,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,2048,high,24.0,Naive colocation (no cap),1.2848900026407684,grid_qwen15/s62v5:vllm,1
+Qwen1.5-MoE-A2.7B,2048,low,6.0,BubbleTea,1.033533737640005,grid_qwen15/s62v5:vllm,2
+Qwen1.5-MoE-A2.7B,2048,med,18.0,BubbleTea,1.0648482989902057,grid_qwen15/s62v5:vllm,2
+Qwen1.5-MoE-A2.7B,2048,high,24.0,BubbleTea,1.060165048348752,grid_qwen15/s62v5:vllm,2
+DeepSeek-V2-Lite,1024,low,4.0,LLMStation,1.0410619368757914,grid_dsv2/s62v5:llms_vllm,2
+DeepSeek-V2-Lite,1024,med,11.0,LLMStation,1.2002426709181047,grid_dsv2/s62v5:llms_vllm,2
+DeepSeek-V2-Lite,1024,high,16.0,LLMStation,1.1219398963902552,grid_dsv2/s62v5:llms_vllm,2
+DeepSeek-V2-Lite,1024,low,4.0,Naive colocation (6% cap),0.9603491235455234,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,1024,med,11.0,Naive colocation (6% cap),1.0848522716059434,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,1024,high,16.0,Naive colocation (6% cap),1.2835250159943383,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,1024,low,4.0,Naive colocation (no cap),1.003968913928497,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,1024,med,11.0,Naive colocation (no cap),1.1079009919617395,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,1024,high,16.0,Naive colocation (no cap),1.0230075812648005,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,1024,low,4.0,BubbleTea,0.9828026219297897,grid_dsv2/s62v5:vllm,2
+DeepSeek-V2-Lite,1024,med,11.0,BubbleTea,1.0595330393170213,grid_dsv2/s62v5:vllm,2
+DeepSeek-V2-Lite,1024,high,16.0,BubbleTea,1.0121201605599404,grid_dsv2/s62v5:vllm,2
+DeepSeek-V2-Lite,2048,low,3.5,LLMStation,1.0524114591930267,grid_dsv2/s62v5:llms_vllm,2
+DeepSeek-V2-Lite,2048,med,9.0,LLMStation,1.1104796179596441,grid_dsv2/s62v5:llms_vllm,2
+DeepSeek-V2-Lite,2048,high,14.0,LLMStation,1.0840959188552788,grid_dsv2/s62v5:llms_vllm,2
+DeepSeek-V2-Lite,2048,low,3.5,Naive colocation (6% cap),0.9968212514770289,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,2048,med,9.0,Naive colocation (6% cap),1.4015911362342948,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,2048,high,14.0,Naive colocation (6% cap),0.9817904743670871,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,2048,low,3.5,Naive colocation (no cap),1.2087268794518118,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,2048,med,9.0,Naive colocation (no cap),1.2040558668165606,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,2048,high,14.0,Naive colocation (no cap),1.0540613025643597,grid_dsv2/s62v5:vllm,1
+DeepSeek-V2-Lite,2048,low,3.5,BubbleTea,1.0613654246984368,grid_dsv2/s62v5:vllm,2
+DeepSeek-V2-Lite,2048,med,9.0,BubbleTea,1.0396099553298455,grid_dsv2/s62v5:vllm,2
+DeepSeek-V2-Lite,2048,high,14.0,BubbleTea,1.0690143712354387,grid_dsv2/s62v5:vllm,2

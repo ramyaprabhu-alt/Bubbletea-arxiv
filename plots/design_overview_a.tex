@@ -1,0 +1,77 @@
+% Design overview with numbered steps (1)-(6), referenced in
+% sections/proposedSys.tex and in plots/design_example.tex.
+% Font sizes chosen so that, after \resizebox to \columnwidth, labels match
+% figures/bubble_schedule.drawio.pdf (about 6.9 pt, annotations 6.3 pt).
+\def\btmain{\fontsize{8.45}{9.4}\selectfont}
+\def\btsmall{\fontsize{7.7}{8.7}\selectfont}
+\definecolor{btblue}{RGB}{214,234,248}
+\tikzset{
+  bt/box/.style={draw, rounded corners=2pt, align=center, inner sep=2.5pt,
+                 font=\btmain},
+  bt/op/.style={bt/box, fill=btblue, minimum width=2.3cm, minimum height=0.48cm},
+  bt/hook/.style={bt/box, fill=orange!22, minimum width=2.3cm, minimum height=0.48cm},
+  bt/tr/.style={bt/box, fill=btblue, minimum width=2.35cm, minimum height=0.44cm},
+  bt/chunk/.style={bt/box, fill=green!15, minimum width=2.35cm, minimum height=0.44cm},
+  bt/arr/.style={-{Latex[length=1.5mm]}, semithick},
+  bt/darr/.style={-{Latex[length=1.5mm]}, semithick, dashed},
+  bt/lbl/.style={font=\btsmall, align=center, inner sep=1pt},
+  bt/group/.style={draw, rounded corners=4pt, inner sep=5pt},
+}
+\begin{tikzpicture}
+% Serving worker: the MoE layer with BubbleTea's two in-layer hooks.
+\node[bt/op]   (route) at (0, 0)     {Router (top-$k$)};
+\node[bt/hook] (pred)  at (0,-0.92)  {Slack predictor};
+\node[bt/op]   (gemm)  at (0,-1.84)   {Expert GEMMs};
+\node[bt/hook] (open)  at (0,-2.76)  {Open window};
+\node[bt/op]   (ar)    at (0,-3.68)   {TP all-reduce};
+\foreach \a/\b in {route/pred, pred/gemm, gemm/open, open/ar}
+  \draw[bt/arr] (\a) -- (\b);
+% Gate flag in device memory, shared by both processes.
+\node[bt/box, fill=orange!35, minimum width=1.55cm, minimum height=0.85cm]
+  (gate) at (2.75,-2.76) {Gate flag\\[-1pt]{\btsmall device memory}};
+\draw[bt/darr] (pred.east) -| (gate.north);
+\draw[bt/arr] (open.east) -- (gate.west);
+\node[bt/lbl, below=0.1cm of gate] (closer)
+  {cleared at\\$t_{\mathrm{open}} {+} \mathit{budget}_r {-} m$\\or when the\\AR ends};
+% Trainer process: chunks, each behind a stream wait on the gate.
+\node[bt/tr]    (w1) at (6.0, 0)    {wait on gate};
+\node[bt/chunk] (c1) at (6.0,-0.8) {chunk $i$ (${\le}\,50\,\mu$s)};
+\node[bt/tr]    (w2) at (6.0,-1.6)  {wait on gate};
+\node[bt/chunk] (c2) at (6.0,-2.4) {chunk $i{+}1$};
+\node[bt/tr]    (w3) at (6.0,-3.2)  {wait on gate};
+\node[font=\btmain] (dots) at (6.0,-3.72) {$\vdots$};
+\foreach \a/\b in {w1/c1, c1/w2, w2/c2, c2/w3}
+  \draw[bt/arr] (\a) -- (\b);
+% Numbered steps, matching the text and the worked example; placed before the
+% process boxes so each box fits around its own step markers.
+\tikzset{bt/step/.style={circle, draw, fill=white, inner sep=0.6pt,
+                         font=\btsmall\bfseries}}
+\node[bt/step, left=2pt of route] (s1) {1};
+\node[bt/step, left=2pt of pred]  (s2) {2};
+\node[bt/step, left=2pt of gemm]  (s3) {3};
+\node[bt/step, left=2pt of open]  (s4) {4};
+\node[bt/step, right=2pt of c1]   (s5) {5};
+% Process boxes.
+\begin{scope}[on background layer]
+  \node[bt/group, fill=black!2, fit=(route)(ar)(s1)(s4),
+        label={[font=\btmain\bfseries]above:Serving worker}] (srv) {};
+  \node[bt/group, fill=blue!3, fit=(w1)(dots)(s5),
+        label={[font=\btmain\bfseries]above:Fine-tuning worker}] (trn) {};
+\end{scope}
+% Arrow labels start past the Serving-worker border so it does not cut them.
+\node[bt/lbl, anchor=south west, xshift=1.5pt, yshift=1pt] at (pred.east -| srv.east)
+  {$\mathit{budget}_r$ (on GPU)};
+\node[bt/lbl, anchor=south, yshift=1pt] at ($(open.east -| srv.east)!0.5!(gate.west)$) {set};
+\draw[bt/darr] (gate.east) -- node[bt/lbl, above, yshift=1pt] {admits}
+  (gate.east -| trn.west);
+\draw[bt/darr] (route.east -| srv.east) -- node[bt/lbl, above]
+  {base weights\\(CUDA IPC)} (route.east -| trn.west);
+\begin{scope}[on background layer]
+  \node[draw, rounded corners=5pt, dashed, inner sep=4pt,
+        fit={(srv)(trn)(gate)(closer)([yshift=0.4cm]srv.north)}] (gpu) {};
+\end{scope}
+\node[font=\btmain, anchor=north west] at (gpu.south west) {GPU $r$ (CUDA MPS)};
+\node[bt/step, anchor=west, xshift=1pt] at (closer.east) {6};
+\draw[bt/darr, <->] (trn.south) -- ([yshift=-0.3cm]trn.south |- gpu.south)
+  node[bt/lbl, anchor=north] {exchanges with other GPUs};
+\end{tikzpicture}

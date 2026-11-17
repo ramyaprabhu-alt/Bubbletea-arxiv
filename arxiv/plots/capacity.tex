@@ -1,0 +1,65 @@
+\pgfplotstableread[col sep=comma]{plots/CSVs/capacity.csv}\captable
+\newcommand{\cappanel}[2]{%
+  \nextgroupplot[#2]
+  \addplot[fill=pastel8, draw=black,
+    select coords between index={#1}{\numexpr#1+3\relax}]
+    table[x expr=\coordindex, y=idle]{\captable};
+  \addplot[fill=pastel7, draw=black,
+    select coords between index={#1}{\numexpr#1+3\relax}]
+    table[x expr=\coordindex, y=decode]{\captable};
+  \addplot[fill=sysBubbleTea, draw=black,
+    select coords between index={#1}{\numexpr#1+3\relax}]
+    table[x expr=\coordindex, y=bubbles]{\captable};
+}
+\protected\def\capticklabel{\pgfmathtruncatemacro{\caprow}{\tick}%
+  \pgfplotstablegetelem{\caprow}{req_per_s}\of\captable
+  \pgfmathprintnumber[precision=4]{\pgfplotsretval}}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=7 by 3, horizontal sep=6pt,
+        vertical sep=22pt, y descriptions at=edge left},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar stacked, /pgf/bar width=7pt, /pgf/bar shift=0pt,
+      enlarge x limits=0.18,
+      width=59.52pt,
+      height=1.15cm,
+      title style={yshift=-3pt},
+      ymax=100, ytick={0,25,50,75,100},
+      xticklabel={\capticklabel},
+      xticklabel style={font=\sffamily\tiny, rotate=45, anchor=north east,
+        inner sep=1pt},
+      ylabel style={align=center},
+    ]
+
+    \cappanel{0}{title={1k prompts}, ylabel={Qwen3-30B\\\% of a GPU}}
+    \cappanel{4}{title={2k prompts}}
+    \cappanel{8}{title={4k prompts}}
+    \cappanel{12}{title={8k prompts},
+      legend columns=-1,
+      legend style={yshift=14pt,
+        /tikz/every even column/.append style={column sep=3pt}}}
+    \addlegendentry{Idle (whole GPU free)}
+    \addlegendentry{Spare compute in decode steps}
+    \addlegendentry{Prefill bubbles}
+    \cappanel{16}{title={16k prompts}}
+    \cappanel{20}{title={24k prompts}}
+    \cappanel{24}{title={32k prompts}}
+
+    \cappanel{28}{ylabel={Qwen1.5-MoE\\\% of a GPU}}
+    \cappanel{32}{}
+    \cappanel{36}{}
+    \cappanel{40}{}
+    \cappanel{44}{}
+    \cappanel{48}{}
+    \cappanel{52}{}
+
+    \cappanel{56}{ylabel={DS-V2-Lite\\\% of a GPU}}
+    \cappanel{60}{}
+    \cappanel{64}{}
+    \cappanel{68}{xlabel={Serving load: high to a quarter of it (req/s)}}
+    \cappanel{72}{}
+    \cappanel{76}{}
+    \cappanel{80}{}
+  \end{groupplot}
+\end{tikzpicture}

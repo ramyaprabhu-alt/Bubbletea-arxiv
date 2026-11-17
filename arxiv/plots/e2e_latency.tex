@@ -1,0 +1,69 @@
+\input{plots/e2e_latency_defs}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group name=ttft, group size=7 by 3, horizontal sep=6pt,
+        vertical sep=16pt, y descriptions at=edge left},
+      latgrid, width=59.61pt, height=1.15cm, /pgf/bar width=3.5pt,
+    ]
+
+    \latpanel{0}{ttft}{title={1k prompts}, ylabel={Qwen3-30B\\p90 TTFT ratio}}
+    \latpanel{3}{ttft}{title={2k prompts}}
+    \latpanel{6}{ttft}{title={4k prompts}}
+    \latpanel{9}{ttft}{title={8k prompts},
+      legend columns=-1,
+      legend style={yshift=14pt,
+        /tikz/every even column/.append style={column sep=3pt}}}
+    \latlegend
+    \latpanel{12}{ttft}{title={16k prompts}}
+    \latpanel{15}{ttft}{title={24k prompts}}
+    \latpanel{18}{ttft}{title={32k prompts}}
+
+    \latpanel{21}{ttft}{ylabel={Qwen1.5-MoE\\p90 TTFT ratio}}
+    \latpanel{24}{ttft}{naive label/.style={label right}}
+    \latpanel{27}{ttft}{}
+    \latpanel{30}{ttft}{}
+    \latpanel{33}{ttft}{}
+    \latpanel{36}{ttft}{}
+    \latpanel{39}{ttft}{}
+
+    \latpanel{42}{ttft}{ylabel={DS-V2-Lite\\p90 TTFT ratio}}
+    \latpanel{45}{ttft}{}
+    \latpanel{48}{ttft}{}
+    \latpanel{51}{ttft}{}
+    \latpanel{54}{ttft}{}
+    \latpanel{57}{ttft}{}
+    \latpanel{60}{ttft}{}
+  \end{groupplot}
+
+  \begin{groupplot}[
+      group style={group name=tpot, group size=7 by 3, horizontal sep=6pt,
+        vertical sep=16pt, y descriptions at=edge left},
+      latgrid, width=59.61pt, height=1.15cm, /pgf/bar width=3.5pt,
+    ]
+
+    \latpanel{0}{tpot}{title={1k prompts}, ylabel={Qwen3-30B\\p90 TPOT ratio}, anchor=north west,
+      at={($(ttft c1r3.south west)+(0,-30pt)$)}}
+    \latpanel{3}{tpot}{title={2k prompts}}
+    \latpanel{6}{tpot}{title={4k prompts}}
+    \latpanel{9}{tpot}{title={8k prompts}}
+    \latpanel{12}{tpot}{title={16k prompts}}
+    \latpanel{15}{tpot}{title={24k prompts}}
+    \latpanel{18}{tpot}{title={32k prompts}}
+
+    \latpanel{21}{tpot}{ylabel={Qwen1.5-MoE\\p90 TPOT ratio}}
+    \latpanel{24}{tpot}{}
+    \latpanel{27}{tpot}{}
+    \latpanel{30}{tpot}{}
+    \latpanel{33}{tpot}{}
+    \latpanel{36}{tpot}{}
+    \latpanel{39}{tpot}{}
+
+    \latpanel{42}{tpot}{ylabel={DS-V2-Lite\\p90 TPOT ratio}}
+    \latpanel{45}{tpot}{}
+    \latpanel{48}{tpot}{}
+    \latpanel{51}{tpot}{xlabel={Serving load: low, medium, high (req/s)}}
+    \latpanel{54}{tpot}{}
+    \latpanel{57}{tpot}{}
+    \latpanel{60}{tpot}{}
+  \end{groupplot}
+\end{tikzpicture}

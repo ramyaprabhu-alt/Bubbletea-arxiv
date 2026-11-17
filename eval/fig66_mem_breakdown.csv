@@ -1,0 +1,13 @@
+model,part,GiB_per_GPU
+Qwen3-30B-A3B,lora_state,0.14208984375
+Qwen3-30B-A3B,graph_pool,2.720703125
+Qwen3-30B-A3B,eager_live,0.2923545837402344
+Qwen3-30B-A3B,cached,0.3936805725097656
+Qwen3-30B-A3B,context,1.099609375
+Qwen3-30B-A3B,total,4.6484375
+DeepSeek-V2-Lite,lora_state,0.0786895751953125
+DeepSeek-V2-Lite,graph_pool,1.4994392395019531
+DeepSeek-V2-Lite,eager_live,0.2026844024658203
+DeepSeek-V2-Lite,cached,0.23481178283691406
+DeepSeek-V2-Lite,context,0.9921875
+DeepSeek-V2-Lite,total,3.0078125

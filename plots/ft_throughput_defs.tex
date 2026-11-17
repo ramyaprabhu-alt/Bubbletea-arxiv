@@ -1,0 +1,35 @@
+% shared by ft_throughput.tex (all models, appendix) and ft_throughput_qwen3.tex (body)
+% CSV (plots/scripts/make_e2e_csvs.py): rows model-major, then prompt length
+% (1k-32k), then load; a panel plots 3 rows (low, medium, high load)
+\pgfplotstableread[col sep=comma]{plots/CSVs/ft_throughput.csv}\fttable
+% #1 = first CSV row of the panel, #2 = panel options
+\newcommand{\ftpanel}[2]{%
+  \nextgroupplot[#2]
+  \addplot[fill=sysLLMStation, draw=black,
+    select coords between index={#1}{\numexpr#1+2\relax}]
+    table[x expr=\coordindex, y=llmstation]{\fttable};
+  \addplot[fill=sysNaive40, draw=black,
+    select coords between index={#1}{\numexpr#1+2\relax}]
+    table[x expr=\coordindex, y=naive40]{\fttable};
+  \addplot[fill=sysBubbleTea, draw=black,
+    select coords between index={#1}{\numexpr#1+2\relax},
+    point meta=\thisrow{bubbletea_over_llmstation},
+    nodes near coords={\pgfmathprintnumber[fixed, fixed zerofill,
+      precision=1]{\pgfplotspointmeta}$\times$},
+    % label_lift (from the CSV) raises the label above the tallest bar
+    visualization depends on={\thisrow{label_lift} \as \ftlift},
+    every node near coord/.append style={font=\tiny,
+      text=black, inner sep=1pt,
+      shift={(axis direction cs:0,\ftlift)}}]
+    table[x expr=\coordindex, y=bubbletea]{\fttable};
+}
+% tick label: request rate, read from the CSV row
+% (\protected: pgfplots expands tick labels before typesetting them)
+\protected\def\ftticklabel{\pgfmathtruncatemacro{\ftrow}{\tick}%
+  \pgfplotstablegetelem{\ftrow}{req_per_s}\of\fttable
+  \pgfmathprintnumber[precision=2]{\pgfplotsretval}}
+% legend entries, in plot order
+\newcommand{\ftlegend}{%
+  \addlegendentry{LLMStation}
+  \addlegendentry{\Uncoord (40\% cap)}
+  \addlegendentry{\sys{}}}

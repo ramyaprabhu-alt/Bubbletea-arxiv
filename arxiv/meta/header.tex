@@ -1,0 +1,37 @@
+\pdfminorversion=7
+\documentclass{article}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{hyperref}
+\usepackage[accepted]{mlsys2025}
+\makeatletter
+\renewcommand{\Notice@String}{}
+\makeatother
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage[abbreviations]{foreign}
+\usepackage{xspace}
+\usepackage[inline]{enumitem}
+\usepackage[algo2e,ruled,lined,boxed,commentsnumbered, noend, linesnumbered, procnumbered]{algorithm2e}
+\usepackage{cleveref}
+
+\renewcommand{\cite}{\citep}
+
+\newcommand{\doi}[1]{doi: \href{https://doi.org/#1}{\nolinkurl{#1}}}
+
+\providecommand{\Description}[1]{}
+
+\usepackage{framed}
+\definecolor{highlightcolor}{RGB}{232, 244, 232}
+\newenvironment{highlight}{\colorlet{shadecolor}{highlightcolor}\begin{shaded}\noindent}{\end{shaded}}
+
+\usepackage{pifont}%
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+\newcommand{\greencheck}{{\color{OliveGreen}\cmark}}
+\newcommand{\redcross}{{\color{red}\xmark}}

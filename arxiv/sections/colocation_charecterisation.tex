@@ -1,0 +1,115 @@
+\section{Colocation systems and the planner experiment}
+\label{sec:appx-gap}
+
+Colocation runs best-effort work on resources that latency-critical
+serving leaves unused while preserving its \acp{SLO}
+~\cite{flexllm,llmstation,harli,deltaserve}. Fine-tuning is a natural
+candidate because it is throughput-oriented and delay-tolerant, and
+\ac{PEFT} methods such as \ac{LoRA}~\cite{lora} train only small
+adapters while reusing the serving model's resident weights. Because
+GPU kernels are difficult to preempt once launched~\cite{nonpreempt},
+colocation systems must both identify spare capacity and expose work
+units short enough to fit inside it.
+
+Existing inference--fine-tuning systems already decompose training for
+this purpose, but make admission decisions at serving boundaries using
+signals such as batch composition, iteration timing, or engine
+headroom (\Cref{tab:colocation_systems}). Expert-parallel bubbles have a different
+granularity: they open and close inside one \ac{MoE} layer and differ
+across GPUs. Using them therefore requires both \emph{bubble-sized
+work} and a \emph{per-GPU} admission decision that reveals where slack
+exists and for how long. The current router assignment provides this missing signal
+(\S\ref{sec:design-predict}).
+
+\begin{table*}[t]
+\centering
+\small
+\caption{
+\textbf{Existing colocation systems reason about serving-level headroom, whereas \sys{} identifies slack per GPU inside an \ac{MoE} layer.}
+}
+\label{tab:colocation_systems}
+\begin{tabular}{lllll}
+\toprule
+\emph{System} & \emph{Capacity targeted} & \emph{Work unit} & \emph{Admission scope} & \emph{Signal} \\
+\midrule
+\flexllm~\cite{flexllm}
+& serving headroom
+& token slot
+& serving iteration
+& batch composition \\
+\llmstation~\cite{llmstation}
+& decode / idle headroom
+& tasklet
+& serving iteration
+& iteration timing \\
+\harli~\cite{harli}
+& decode underutilization
+& SM partition
+& serving iteration
+& predicted latency \\
+\deltaserve~\cite{deltaserve}
+& serving / idle headroom
+& LoRA batch
+& serving iteration
+& predicted latency \\
+\midrule
+\sys{}
+& \ac{EP} bubble
+& fine-tuning chunk
+& GPU $\times$ \ac{MoE} layer
+
+& router top-$k$ assignment \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+We first isolate the planning requirement. We replay a
+Qwen3-30B-A3B serving trace (\ac{TP}$=$\ac{EP}$=$2, 128k-token
+prefill) against the same 486 measured fine-tuning chunks
+(median 567\,$\mu$s) while varying only the information available to
+the planner. A \emph{router-blind} planner assigns every GPU a
+historical layer-level slack estimate; an \emph{oracle GPU-agnostic}
+planner instead receives the true mean bubble of the current layer but
+still assigns the same budget to every GPU; and a \emph{router-aware}
+planner estimates slack separately for each GPU from the current
+routing decision. We compare their \emph{bubble utilization}, the
+fraction of available bubble GPU-time occupied by training, at
+approximately the same 1\% overrun rate.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{
+    \textbf{Per-GPU planning is required to use bubbles.}
+    All planners use the same fine-grained fine-tuning chunks and operate
+    near a 1\% overrun rate.}
+
+  \label{tab:gap-planner}
+  \begin{tabular}{lrr}
+    \toprule
+    Planner & Bubble utilization & Overrun rate \\
+    \midrule
+    Router-blind
+      & 1.28--1.31\% & 1.04\% \\
+    Oracle GPU-agnostic
+      & 1.22--1.30\% & 1.04\% \\
+    Router-aware
+      & 42.74--45.14\% & 0.83--1.04\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Table~\ref{tab:gap-planner} shows that router-aware planning recovers
+42.7--45.1\% of bubble capacity, compared with about 1.3\% for either
+GPU-agnostic planner. Even knowing the exact \emph{average} slack of
+the current layer is therefore insufficient: the planner must know
+which GPU owns that slack.
+
+Shorter work units determine how much of this per-GPU capacity can be
+used. With router-aware planning, reducing the median chunk duration
+from 4.13\,ms (97 chunks) to 567\,$\mu$s (486 chunks) raises bubble
+utilization from 37.95--38.46\% to 42.74--45.14\%. Yet the
+router-blind planner remains near 1--1.5\% under both partitions.
+Thus, finer execution helps only after the planner identifies the
+right GPU: chunk size determines \emph{how much} work fits, while
+router state determines \emph{where} it can safely run.

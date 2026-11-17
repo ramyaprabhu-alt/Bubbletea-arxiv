@@ -1,0 +1,71 @@
+\section{Introduction}
+\label{sec:intro}
+
+\acresetall
+
+GPU resources are a dominant cost of serving \acp{LLM}, motivating systems that improve accelerator utilization~\cite{orca,vllm,sarathi,distserve,splitwise,muxserve,aegaeon}. Latency-critical inference must meet stringent response-time \acp{SLO}, yet rarely uses every GPU resource at every instant.
+Colocation systems reclaim this otherwise-idle capacity by running best-effort work, such as fine-tuning, alongside serving as long as its \acp{SLO} are preserved~\cite{orion,llmstation,harli}.
+
+Many recent frontier \acp{LLM} use a \ac{MoE} architecture~\cite{deepseekv3,deepseekv4,qwen3,kimik2,gptoss,gemini15,gemini25}. An \ac{MoE} layer contains many feed-forward \emph{experts}, and a router sends each token to only a few of them~\cite{switch}, increasing model capacity without proportionally increasing per-token computation.
+Since for large \acp{LLM} the total size of experts is beyond what a single GPU can store, such models are typically served with \ac{EP}, which places different experts on different GPUs~\cite{deepseekv3,vllm-ep-rfc}.
+
+\ac{EP}, however, introduces a new source of underutilization.
+Because token routing is input-dependent, GPUs receive different amounts of expert work.
+Lightly loaded GPUs finish early and wait for the results of the most-loaded GPU before computation can proceed.
+We call the time a GPU spends waiting for the most-loaded GPU a \emph{bubble}.
+This load imbalance is well known and heavily optimized through techniques such as custom token routing objectives, strategic expert replication and placement, token redistribution~\cite{switch,gshard,expertchoice,deepseekv3,fastermoe,eplb,lplb,waterfill,harmoeny}, and specialized communication and expert kernels~\cite{deepep,pplxkernels,megablocks}.
+We build on these mechanisms and ask the question they leave open:
+\begin{highlight}
+  \emph{Once load balancing and execution optimizations have done
+  their job, how much idle GPU capacity remains, and can it be leveraged to perform useful work?}
+\end{highlight}
+
+\begin{figure}[t]
+  \centering
+  \inputplot{intro_trace}
+  \caption{\textbf{\sys trains 3.3$\times$ faster than \llmstation and 14$\times$ faster than \uncoord on a production trace, while keeping p90 \ac{TTFT} within 3\% of serving alone.}
+  Load (top) and fine-tuning throughput (bottom) of \sys and baselines over time on a \textsc{Qwen3-30B-A3B} model serving a production (Azure) trace at its original rate (with \SI{30}{\second} bins).
+  Legend values give each system’s p90 \ac{TTFT} over the whole trace, relative to serving alone.}
+  \label{fig:intro-trace}
+
+\end{figure}
+
+Our analysis in \S\ref{sec:characterization} answers the first half of this question and reveals that substantial idle capacity remains.
+After applying state-of-the-art \ac{EP} load balancing techniques, bubbles still account for 8--13\% of prefill time.
+The second half of the question, whether this capacity can perform useful work, is more challenging.
+Existing colocation systems are natural candidates~\cite{flexllm,llmstation,harli,deltaserve}.
+They place best-effort work, typically \ac{PEFT} such as \ac{LoRA}~\cite{lora}, on the same GPUs as inference.
+However, they mostly exploit GPU underutilization during output generation (decode) and schedule work at the granularity of an inference or training step, whereas bubbles occur mostly during initial prompt processing (prefill), inside a single \ac{MoE} layer, and differ in length across GPUs.
+Existing systems are therefore ineffective in leveraging such bubbles.
+
+We introduce \sys, a colocation system that leverages bubbles to fine-tune \acp{LLM} with \ac{LoRA} while serving them.
+The key insight behind \sys is that \emph{the length of a bubble is predictable}.
+During inference, the router decides how many tokens each GPU receives before the experts run, and using this count, \sys predicts each GPU's bubble duration with a median error of \SI{8.9}{\micro\second}, about 7\% of the median bubble.
+We introduce the first scheduler that admits fine-tuning work per GPU inside an \ac{MoE} layer, unlike existing colocation systems: \sys runs short chunks of fine-tuning work on each GPU only inside that GPU's predicted bubble window.
+
+We also design a compiler that turns the served model into training code.
+A serving engine only runs the model's \emph{forward pass}, which pushes tokens through the layers to predict the next one.
+Training also needs a \emph{backward pass}, which propagates the error back through the model to compute the gradients that update the \ac{LoRA} adapter.
+The compiler takes the serving engine's forward pass, derives the matching backward pass, and splits the resulting training step into chunks short enough to fit in a single bubble.
+The generated code operates directly on the weights already loaded for serving, so \sys fine-tunes the model without keeping a second copy of its weights in GPU memory.
+Existing colocation systems either train a second copy of the model~\cite{harli} or require porting each model architecture into their own training engine~\cite{flexllm,llmstation}, and they split training no finer than a layer or a serving iteration.
+Our compiler instead works on the serving engine's model as-is, including its inference-only \ac{MoE} kernels and expert placement, so supporting a new architecture requires no hand-written kernels for backward passes.
+
+We implement \sys and compare it against two baselines.
+Since there are no colocation systems specifically designed for \ac{MoE}, we port an existing colocation system, \llmstation~\cite{llmstation}, to support inference with \ac{MoE} models, and also compare with \uncoord, a stock trainer running beside serving without coordination.
+\Cref{fig:intro-trace} shows the fine-tuning throughput of \sys and both baselines while serving the \textsc{Qwen3-30B-A3B} \ac{LLM} on a bursty production trace.
+Over the trace, \sys trains 3.3$\times$ faster than \llmstation and 14$\times$ faster than \uncoord, and it sustains this advantage throughout,
+including during load bursts.
+Meanwhile, the 90th-percentile \acf{TTFT} (p90 \ac{TTFT}) of \sys stays within 3\% of serving alone, whereas \uncoord increases it by 18\%.
+Part of this gain comes from the fine-grained training runtime that bubbles require, which also makes better use of the decode and idle time that \llmstation already exploits.
+Bubbles add the most at high load, when little decode and idle time is left for training, raising throughput by up to 27\% (\S\ref{sec:eval-ablation}).
+Our further evaluation across three \ac{MoE} models and two production traces confirms that \sys turns idle time in \ac{MoE} serving into substantial fine-tuning throughput, while keeping both p90 \ac{TTFT} and \ac{TPOT} within 10\% of serving alone in 50 of 63 workloads.
+
+This paper makes the following contributions:
+\begin{itemize}
+  \item \textbf{A characterization of expert-parallel bubbles}, showing that they survive
+    load balancing, are predictable, and need per-GPU planning inside the \ac{MoE} layer (\S\ref{sec:characterization}).
+  \item \sys, \textbf{a novel colocation system} that predicts each GPU’s bubble from the router’s decision, schedules short fine-tuning chunks only inside that window, and uses a compiler to derive those chunks automatically from the served \ac{LLM} (\S\ref{sec:design}).
+
+  \item \textbf{An evaluation of \sys and baselines} on three \ac{MoE} models and two production traces that breaks the gains down by source of capacity and by mechanism (\S\ref{sec:evaluation}).
+\end{itemize}

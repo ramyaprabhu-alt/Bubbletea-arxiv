@@ -1,0 +1,65 @@
+\graphicspath{ {figures/} }
+\usepackage{tikz}
+\usepackage[eulergreek]{sansmath}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{cleveref}
+\usepackage{comment}
+\crefname{assumption}{assumption}{assumptions}
+
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{external,units,colorbrewer,groupplots,fillbetween,statistics}
+\tikzexternalize
+\tikzsetexternalprefix{figures/}
+\tikzset{external/mode=list and make}
+\usetikzlibrary{patterns,shapes.misc}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc,decorations.pathreplacing}
+
+% Overleaf + Pgfplots
+\makeatletter
+\begingroup\endlinechar=-1\relax
+\everyeof{\noexpand}%
+\edef\x{\endgroup\def\noexpand\homepath{%
+		\@@input|"kpsewhich --var-value=HOME" }}\x
+\makeatother
+
+\def\overleafhome{/tmp}
+\newcommand{\inputplot}[1]{%
+	\ifx\homepath\overleafhome%
+	\includegraphics{#1.pdf}%
+	\else%
+	{\sffamily\scriptsize
+	 \tikzsetnextfilename{#1}\def\currentplot{#1}%
+	 \input{plots/#1}\unskip}% \unskip: kill the newline-space after
+	 % \end{tikzpicture}, else \centering breaks an extra empty line \rp
+	\fi
+}
+
+% Compute ideal width of groupped plots
+\newcommand{\newgroupwidth}[2]% #1 = plot name, #2 = width to use
+{\expandafter\xdef\csname groupwidth#1\endcsname{#2}}
+
+% keyed by plot name (set by \inputplot), not by a counter: a counter shifts
+% when a groupwidth is commented out and hands its width to another plot
+\def\currentplot{}
+\newsavebox{\groupwidthbox}
+\makeatletter
+\newenvironment{groupwidth}[1]% #1 = number of groupplots per row
+{\edef\groupnumber{#1}% save for \endgroupwidth
+	\@ifundefined{groupwidth\currentplot}{\pgfmathsetlengthmacro{\mywidth}{\linewidth/\groupnumber}}%
+	{\expandafter\let\expandafter\mywidth\csname groupwidth\currentplot\endcsname}%
+	\begin{lrbox}{\groupwidthbox}%
+		\tikzset{/pgfplots/width={\mywidth}}%
+		\ignorespaces}%
+	{\end{lrbox}%
+	\usebox\groupwidthbox
+	% measure only once: the externalized PDF is not rebuilt when the width
+	% changes, so re-measuring it on every run never converges
+	\@ifundefined{groupwidth\currentplot}%
+	{\pgfmathsetlengthmacro{\mywidth}{\mywidth + (\linewidth - \wd\groupwidthbox)/\groupnumber}}{}%
+	% main job only: export jobs typeset a placeholder text, not the plot
+	\tikzifexternalizing{}{%
+		\immediate\write\@auxout{\string\newgroupwidth{\currentplot}{\mywidth}}%
+	}}
+\makeatother
+\let\Bbbk\relax

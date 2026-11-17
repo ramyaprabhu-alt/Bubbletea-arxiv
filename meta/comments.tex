@@ -1,0 +1,47 @@
+\usepackage{ifthen}
+
+\ExplSyntaxOn
+\seq_new:N \l__zzz_words_seq
+\cs_new_protected:Npn \zzzhighlight #1
+  {
+    \seq_set_split:Nnn \l__zzz_words_seq { ~ } {#1}
+    \seq_map_indexed_inline:Nn \l__zzz_words_seq
+      {
+        \int_compare:nNnF {##1} = { 1 }
+          { { \color{yellow} \leaders \hrule height \ht\strutbox depth \dp\strutbox
+              \hskip \fontdimen2\font plus .5em minus \fontdimen4\font } }
+        { \setlength{\fboxsep}{0pt} \colorbox{yellow}{\strut ##2\/} }
+      }
+  }
+\definecolor{jchengreen}{RGB}{0,110,60}
+
+\ExplSyntaxOff
+\newboolean{showcomments}
+\setboolean{showcomments}{false}
+\ifthenelse{\boolean{showcomments}}
+{ \newcommand{\mynote}[3]{
+		\fbox{\bfseries\sffamily\scriptsize#1}
+		{\small$\blacktriangleright$\textsf{\emph{\color{#3}{#2}}}$\blacktriangleleft$}}
+	\newcommand{\zzz}[1]{{\sffamily\itshape\zzzhighlight{#1}}\xspace}}
+{ \newcommand{\mynote}[3]{}
+	\newcommand{\zzz}[1]{}}
+\newcommand{\amk}[1]{\mynote{AMK}{#1}{red}}
+\newcommand{\rp}[1]{\mynote{Rafael}{#1}{orange}}
+\newcommand{\rnp}[1]{\mynote{Ramya}{#1}{violet}}
+\newcommand{\mv}[1]{\mynote{Martijn}{#1}{brown}}
+\newcommand{\oana}[1]{\mynote{Oana}{#1}{cyan}}
+\newcommand{\jchen}[1]{\mynote{JChen}{#1}{jchengreen}}
+\newcommand{\mathis}[1]{\mynote{Mathis}{#1}{cyan}}
+\newcommand{\sami}[1]{\mynote{Sami}{#1}{magenta}}
+\newcommand{\svr}[1]{\mynote{Saurav}{#1}{brown}}
+\newcommand{\chatgpt}[1]{\mynote{Chat-GPT}{#1}{purple}}
+\newcommand{\TODO}[1]{\zzz{TODO: #1}}
+\newcommand{\FIX}{\zzz{FIX}}
+
+\ifthenelse{\boolean{showcomments}}
+{ \newcommand{\OPEN}[1]{\par\medskip\noindent{\setlength{\fboxsep}{3pt}\fcolorbox{red}{red!15}{\parbox{0.94\columnwidth}{\textsf{\textbf{\color{red!60!black}{OPEN ISSUE:}} \emph{#1}}}}}\medskip}}
+{ \newcommand{\OPEN}[1]{}}
+
+\ifthenelse{\boolean{showcomments}}
+{ \newcommand{\LATER}[1]{\par\medskip\noindent{\setlength{\fboxsep}{3pt}\fcolorbox{blue!50!black}{blue!8}{\parbox{0.94\columnwidth}{\textsf{\textbf{\color{blue!40!black}{LATER:}} \emph{#1}}}}}\medskip}}
+{ \newcommand{\LATER}[1]{}}

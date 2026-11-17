@@ -1,0 +1,131 @@
+% palette shared by bar and line plots
+\colorlet{bar1}{black!70}
+\colorlet{bar2}{blue!70!black}
+\colorlet{bar3}{green!55!black}
+\colorlet{bar4}{red!70!black}
+\colorlet{bar5}{violet!70}
+\colorlet{bar6}{orange!85!black}
+
+% pastel palette (ColorBrewer Set2, colorblind-safe)
+\definecolor{pastel1}{HTML}{8DA0CB}
+\definecolor{pastel2}{HTML}{FC8D62}
+\definecolor{pastel3}{HTML}{66C2A5}
+\definecolor{pastel4}{HTML}{E78AC3}
+\definecolor{pastel5}{HTML}{A6D854}
+\definecolor{pastel6}{HTML}{FFD92F}
+\definecolor{pastel7}{HTML}{E5C494}
+\definecolor{pastel8}{HTML}{B3B3B3}
+
+% one color per system, shared by all evaluation plots
+\colorlet{sysBubbleTea}{pastel2}
+\colorlet{sysLLMStation}{pastel1}
+\colorlet{sysNaive}{pastel3!70!black}
+% naive colocation by trainer MPS cap, light to dark: 6%, 40%, no cap
+\colorlet{sysNaiveCap}{pastel3!45}
+\colorlet{sysNaive40}{pastel3!75}
+
+% ablation steps (A)-(E) towards BubbleTea: softened Set2 colours not used
+% by the systems above, ending at BubbleTea's own colour
+\colorlet{ladderA}{pastel8}
+\colorlet{ladderB}{pastel7}
+\colorlet{ladderC}{pastel6!50}
+\colorlet{ladderD}{pastel4!65}
+\colorlet{ladderE}{sysBubbleTea}
+
+% Common axis-box height for every data plot: change it here only;
+% a plot sets height= only to deviate from it.
+\newcommand{\plotheight}{1.55cm}
+
+\pgfplotsset{compat=newest,
+    % sizes are those of the axis box; labels come on top
+    scale only axis, width=\linewidth-40pt, height=\plotheight,
+    every axis/.append style={
+     semithick,
+     ymajorgrids=true,
+    },
+    legend style={
+     draw=none,
+     fill=white,
+     anchor=south,
+     at={(0.5, 1)},
+     font=\small,
+    },
+    % line plots: same colors as the bar palette
+    cycle list/.define={lines}{
+     {bar1},{bar2},{bar3},{bar4},{bar5},{bar6}},
+    cycle list name=lines,
+    cycle multiindex* list={
+    	lines\nextlist
+    	{dashed,solid,dotted,dashdotted,densely dashdotdotted}\nextlist
+    	mark list*\nextlist
+    },
+    legend cell align=left,
+    xtick align=outside,
+    xtick pos=bottom,
+    major tick length=1mm,
+    /pgfplots/short line legend/.style={
+     legend image code/.code={
+         \draw[mark repeat=2,mark phase=2,##1]
+             plot coordinates {
+                 (0cm,0cm)
+                     (0.2cm,0cm)
+                     (0.4cm,0cm)
+             };%
+     }
+    },
+    /pgfplots/ybar legend/.style={
+    /pgfplots/legend image code/.code={%
+         \draw[##1,/tikz/.cd,yshift=-0.25em]
+             (0cm,0cm) rectangle (4pt,6pt);},
+    },
+    /pgfplots/xbar legend/.style={
+    /pgfplots/legend image code/.code={%
+         \draw[##1,/tikz/.cd,yshift=-0.25em]
+             (0cm,0cm) rectangle (4pt,6pt);},
+    },
+    % bar charts: filled bars outlined in black, thin black error bars
+    cycle list/.define={bars}{
+     {fill=bar1,draw=black},
+     {fill=bar2,draw=black},
+     {fill=bar3,draw=black},
+     {fill=bar4,draw=black},
+     {fill=bar5,draw=black},
+     {fill=bar6,draw=black}},
+    cycle list/.define={pastel bars}{
+     {fill=pastel1,draw=black},
+     {fill=pastel2,draw=black},
+     {fill=pastel3,draw=black},
+     {fill=pastel4,draw=black},
+     {fill=pastel5,draw=black},
+     {fill=pastel6,draw=black}},
+    bar plot/.style={
+     ybar,
+     /pgf/bar width=8pt,
+     cycle list name=bars,
+     error bars/error bar style={black, thin},
+     enlarge x limits=0.14,
+     xtick=data,
+     ymin=0,
+    },
+    unit code/.code={\si{#1}},
+    tick label style = {font=\sansmath\sffamily},
+    every axis label = {font=\sffamily},
+    legend style = {font=\sffamily},
+    label style = {font=\sffamily},
+    select coords between index/.style 2 args={
+    	x filter/.code={
+    		\ifnum\coordindex<#1\def\pgfmathresult{}\fi
+    		\ifnum\coordindex>#2\def\pgfmathresult{}\fi
+    }},
+	discard if not/.style 2 args={
+		x filter/.code={
+			\edef\tempa{\thisrow{#1}}
+			\edef\tempb{#2}
+			\ifx\tempa\tempb
+			\else
+			\def\pgfmathresult{inf}
+			\fi
+	}}
+}
+
+

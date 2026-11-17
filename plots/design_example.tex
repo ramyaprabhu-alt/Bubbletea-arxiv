@@ -1,0 +1,62 @@
+% Worked example for the design section (sections/proposedSys.tex):
+% one MoE prefill layer on four GPUs. Routing counts: the median-spread 16k layer
+% of BubbleTea-results/grid_eplb/s62v2/rep1/q2/t16384/vllm_bp (Qwen3-30B-A3B,
+% TP=EP=4); predictor as deployed (alpha = 6 us/tile, M = 128), m = 60 us,
+% chunks assumed 50 us. Steps (1)-(6) match design_overview_a.
+% Per GPU (token-expert pairs / tiles / budget us / chunks), shown in the text
+% of Sec. 5.2, not in the figure: 0: 27.2k/230/834/16, 1: 25.3k/213/936/18,
+% 2: 33.4k/278/546/10, 3: 45.2k/369/0/0. Lanes are drawn in us relative to
+% GPU 3's predicted arrival at the all-reduce (no axis shown).
+\tikzset{
+  ex/step/.style={circle, draw, fill=white, inner sep=0.6pt, font=\tiny\bfseries},
+  ex/lbl/.style={font=\tiny, inner sep=1pt},
+}
+\begin{tikzpicture}[font=\scriptsize, x=0.0048cm]
+\def\rowA{0.16}\def\rowB{-0.74}\def\rowC{-1.64}\def\rowD{-2.54}
+% Column headers: router (step 1) over the lanes, predictor (step 2) over
+% the per-GPU windows.
+\node[anchor=east, font=\scriptsize\bfseries] at (-1010,\rowA+0.62) {GPU};
+\node[ex/step] at (-985,\rowA+0.62) {1};
+\node[ex/lbl, anchor=west] at (-960,\rowA+0.62) {uneven expert work};
+\node[ex/step] at (140,\rowA+0.62) {2};
+\node[ex/lbl, anchor=west] at (165,\rowA+0.62) {window $\to$ chunks};
+\foreach \y/\fin/\n/\g/\w in {\rowA/-834/16/0/0.83\,ms, \rowB/-936/18/1/0.94\,ms,
+                              \rowC/-546/10/2/0.55\,ms, \rowD/0/0/3/none} {
+  \node[anchor=east] at (-1010,\y+0.15) {\g};
+  % Serving: experts (start clipped), bubble, all-reduce.
+  \draw[fill=black!25] (-1000,\y) rectangle (\fin,\y+0.3);
+  \ifdim\fin pt<-10pt
+    \draw[pattern=north east lines, pattern color=black!40] (\fin,\y) rectangle (0,\y+0.3);
+  \fi
+  \draw[fill=black!10] (0,\y) rectangle (102,\y+0.3) node[midway] {AR};
+  % Predicted window and chunk count.
+  \node[anchor=west] at (140,\y+0.15) {\w~$\to$~\textbf{\n}};
+  % Trainer: n chunks of 50 us from the window's opening.
+  \ifnum\n>0
+    \foreach \i in {1,...,\n}
+      \draw[fill=green!20, draw=green!40!black]
+        ({\fin+(\i-1)*50+2},\y-0.3) rectangle ({\fin+\i*50-2},\y-0.06);
+    % Window: from opening to (bubble end) - m.
+    \draw[orange!80!black, thick] (\fin,\y-0.36) -- (-60,\y-0.36);
+    \draw[orange!80!black, thick] (-60,\y-0.42) -- (-60,\y-0.30);
+  \fi
+}
+% Labels on GPU 0's lane.
+\node[ex/lbl] at (-917,\rowA+0.15) {experts};
+\node[fill=white, ex/lbl] at (-417,\rowA+0.15) {bubble};
+\draw[decorate, decoration={brace, amplitude=2pt, mirror}]
+  (-60,\rowA-0.40) -- (0,\rowA-0.40) node[midway, below=1pt, ex/lbl] {$m$};
+% GPU 3, the most-loaded: no window.
+\node[ex/lbl] at (-500,\rowD+0.15) {experts};
+\node[ex/lbl, anchor=west] at (-990,\rowD-0.18) {most-loaded: no window};
+% Step markers.
+\node[ex/step] at (-900,\rowC+0.15) {3};
+\node[ex/step] at (-866,\rowA-0.18) {4};
+\draw[dashed, black!45] (-834,\rowA+0.38) -- (-834,\rowA-0.3);
+\node[ex/step] at (-300,\rowC-0.18) {5};
+\node[ex/step] at (-60,\rowD-0.62) {6};
+\draw[dashed, black!45] (-60,\rowA+0.38) -- (-60,\rowD-0.5);
+\draw[dashed, black!45] (0,\rowA+0.38) -- (0,\rowD-0.06);
+\node[ex/lbl, black!60, anchor=north west] at (6,\rowD-0.08) {bubble end};
+\node[ex/lbl, black!60, anchor=north east] at (-82,\rowD-0.5) {close early};
+\end{tikzpicture}

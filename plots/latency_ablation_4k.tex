@@ -1,0 +1,28 @@
+% body: 4k prompts only, one panel per metric (all lengths: latency_ablation.tex)
+\input{plots/latency_ablation_defs}
+%\begin{groupwidth}{3}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=3 by 1, horizontal sep=34pt},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=3.2pt,
+      enlarge x limits=0.25,
+      width=50.04pt,
+      ylabel shift=-4pt,
+      xticklabel={\labticklabel},
+    ]
+
+    \labpanel{0}{ft}{labft, ylabel={FT samples/s}}
+    \labpanel{0}{ttft}{labratio, ylabel={p90 TTFT ratio},
+      xlabel={Serving load: low, medium, high (req/s)},
+      legend columns=2,
+      legend style={yshift=3pt,
+        /tikz/every even column/.append style={column sep=6pt}}}
+    \lablegend
+    \labreflines
+    \labpanel{0}{tpot}{labratio, ylabel={p90 TPOT ratio}}
+    \labreflines
+  \end{groupplot}
+\end{tikzpicture}
+%\end{groupwidth}

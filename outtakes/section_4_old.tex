@@ -1,0 +1,141 @@
+\section{Why Existing Colocation Abstractions Miss Bubbles}
+\label{sec:gap}
+
+\acresetall
+
+Existing inference--fine-tuning colocation systems reclaim capacity
+visible at serving scheduling boundaries, such as decode iterations or
+periods of sub-peak load. Expert-parallel bubbles are different: they
+open and close inside an \ac{MoE} layer and differ across ranks within
+the same forward pass. Harvesting them therefore requires not only short
+work units, but a planner that knows \emph{which rank} has slack and
+\emph{for how long} before launching non-preemptible GPU work.
+
+\subsection{Existing planners reason at serving boundaries}
+\label{sec:gap-boundary}
+
+Table~\ref{tab:gap} summarizes the mismatch. Prior systems make admission
+decisions from serving-level state such as batch composition, iteration
+latency, or engine headroom. Such signals are appropriate for the
+capacity they target, but aggregate away the rank-local structure of an
+\ac{EP} bubble. Even a perfect prediction of the enclosing iteration's
+duration does not reveal which rank will finish expert computation first
+or how much earlier it will finish.
+
+\begin{table*}[t]
+  \centering
+  \small
+  \caption{
+    \textbf{Bubble harvesting requires finer planning granularity, not only
+    finer work units.}
+    Prior colocation systems reason at serving scheduling boundaries;
+    \sys{} predicts slack per rank and \ac{MoE} layer from the current
+    router assignment.
+  }
+  \label{tab:gap}
+  \begin{tabular}{lllll}
+    \toprule
+    System & Capacity targeted & Work unit & Planning granularity & Signal \\
+    \midrule
+    FlexLLM~\cite{flexllm}
+    & decode underutilization
+    & token slot
+    & serving iteration
+    & batch composition \\
+    LLMStation~\cite{llmstation}
+    & decode headroom
+    & tasklet
+    & serving iteration
+    & iteration timing \\
+    Harli~\cite{harli}
+    & decode underutilization
+    & SM partition
+    & serving iteration
+    & predicted latency \\
+    DeltaServe~\cite{deltaserve}
+    & serving headroom
+    & LoRA batch
+    & serving iteration
+    & engine state \\
+    \midrule
+    \sys{}
+    & \ac{EP} bubble
+    & backward chunk
+    & rank $\times$ \ac{MoE} layer
+    & router top-$k$ assignment \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+The needed signal becomes available immediately after routing: the
+serving engine knows the expert work assigned to each rank before expert
+dispatch begins. Section~\ref{sec:char-predict} shows that this state
+predicts rank-local slack, so \sys{} places its admission decision between
+routing and expert execution rather than around the enclosing serving
+iteration.
+
+\subsection{Finer work units do not fix the planning mismatch}
+\label{sec:gap-granularity}
+
+Smaller fine-tuning chunks help work fit inside millisecond-scale bubbles,
+but do not tell the planner where those bubbles occur. We isolate these
+two effects with a trace-driven experiment on Qwen3-30B-A3B,
+\ac{TP}$=2$/\ac{EP}$=2$, at 128k tokens. We replay the same 486
+measured C100 backward chunks (median service time 567\,$\mu$s) against
+the same serving trace for three planners. A \emph{router-blind} planner
+assigns each layer one historical, rank-independent budget. An
+\emph{oracle rank-agnostic} planner receives the true mean bubble across
+ranks for the current request and layer, but not which rank owns the
+slack. \sys{} instead predicts a separate budget for each rank from the
+current router assignment.
+
+We measure \emph{bubble utilization}, the fraction of available bubble
+GPU-time occupied by admitted fine-tuning work, and compare each planner
+near a 1\% overrun rate.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{
+    \textbf{Router state closes the planning gap.}
+    Using identical measured chunks, router-aware planning recovers
+    42.7--45.1\% of available bubble capacity near a 1\% overrun rate,
+    versus approximately 1.3\% for rank-agnostic planners.
+  }
+  \label{tab:gap-planner}
+  \begin{tabular}{lrr}
+    \toprule
+    Planner & Bubble utilization & Overrun rate \\
+    \midrule
+    Router-blind
+    & 1.28--1.31\%
+    & 1.04\% \\
+    Oracle rank-agnostic
+    & 1.22--1.30\%
+    & 1.04\% \\
+    Router-aware (\sys{})
+    & 42.74--45.14\%
+    & 0.83--1.04\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+At comparable overrun frequency, router-aware planning improves harvested
+capacity by 33--35$\times$. The oracle performs no better than the
+router-blind planner despite knowing the true mean slack for the current
+request and layer: knowing \emph{how much} slack exists in aggregate does
+not reveal \emph{which rank} owns it.
+
+Execution granularity is a separate constraint. With the coarser C1000
+partition, 97 measured chunks have a median service time of 4.13\,ms and
+router-aware utilization is 37.95--38.46\%. Recompiling to C100 reduces
+the median to 567\,$\mu$s and raises utilization to 42.74--45.14\%,
+while the router-blind planner remains near 1--1.5\% under both
+partitions. Even an idealized zero-overhead 4$\times$ subdivision of
+C1000 chunks increases router-blind utilization only from 1.50\% to
+2.09\%, compared with 38.46\% to 49.88\% for router-aware planning.
+
+Thus, shorter chunks determine \emph{how much} work can fit, while router
+state determines \emph{where} it can safely execute. \sys{} requires
+both, but the latter is the missing colocation abstraction: rank-specific
+admission inside the \ac{MoE} forward path.

@@ -1,0 +1,62 @@
+% Timeline of one MoE prefill layer on three GPUs, in the style of
+% figures/bubble_schedule.drawio.pdf, with the steps (1)-(6) of
+% plots/design_overview_a.tex (Fig. design-overview). Schematic, not to scale.
+% Font sizes are chosen so that, after \resizebox to \columnwidth, they match
+% the drawio figure (about 6.9 pt for box labels, 6.3 pt for annotations).
+\def\tlmain{\fontsize{7.7}{8.7}\selectfont}
+\def\tlsmall{\fontsize{7.0}{8.0}\selectfont}
+\definecolor{tlblue}{RGB}{214,234,248}
+\tikzset{
+  tl-box/.style={draw, rounded corners=1pt, inner sep=0pt, font=\tlmain},
+  tl-route/.style={tl-box, fill=tlblue, draw=blue!45!black},
+  tl-exp/.style={tl-box, fill=green!12, draw=green!45!black},
+  tl-bub/.style={tl-box, fill=red!15, draw=red!55!black},
+  tl-hook/.style={tl-box, fill=orange!20, draw=orange!75!black},
+  tl-ft/.style={tl-box, fill=blue!10, draw=blue!50!black},
+  tl-step/.style={circle, draw, fill=white, inner sep=0.5pt, font=\tlsmall\bfseries},
+}
+\begin{tikzpicture}[x=0.072cm, y=1cm, font=\tlmain]
+% #1 y of the serving lane, #2 end of expert work, #3 number of chunks, #4 GPU.
+\newcommand{\tlgpu}[4]{%
+  \fill[black!4, rounded corners=3pt] (-18,#1-0.58) rectangle (104,#1+0.46);
+  \node[anchor=west, font=\tlmain\bfseries] at (-17,#1+0.17) {GPU #4};
+  \draw[-{Latex[length=1.2mm]}, black!60] (-1,#1-0.06) -- (103,#1-0.06);
+  % Serving lane: router, experts, bubble, all-reduce.
+  \draw[tl-route] (0,#1) rectangle node {Router} (13,#1+0.34);
+  \draw[tl-exp] (22,#1) rectangle node {Experts} (#2,#1+0.34);
+  \ifdim#2pt<80pt
+    \draw[tl-bub] (#2,#1) rectangle node {Bubble} (86,#1+0.34);
+  \fi
+  \draw[tl-route] (88,#1) rectangle node {AR} (102,#1+0.34);
+  % Lower lane: slack predictor, open window, fine-tuning chunks.
+  \draw[tl-hook] (13,#1-0.46) rectangle node {Pred} (22,#1-0.14);
+  \ifnum#3>0
+    \draw[tl-hook] (#2,#1-0.46) rectangle node {Open} (#2+11,#1-0.14);
+    \foreach \i in {1,...,#3}
+      \draw[tl-ft] ({#2+11+(\i-1)*5+0.4},#1-0.46) rectangle ({#2+11+\i*5-0.4},#1-0.14);
+  \fi
+}
+\tlgpu{0}{37}{4}{0}
+\tlgpu{-1.16}{56}{2}{1}
+\tlgpu{-2.32}{86}{0}{2}
+\node[font=\tlsmall\itshape, anchor=west] at (24,-2.32-0.30) {most-loaded GPU: no window};
+% Window close (t_open + budget - m) and bubble end, across all GPUs.
+\draw[dashed, black!50] (76,0.46) -- (76,-2.85);
+\draw[dashed, black!50] (86,0.46) -- (86,-2.85);
+\node[font=\tlsmall\itshape, anchor=east] at (72.5,0.62) {window close};
+\node[font=\tlsmall\itshape, anchor=west] at (87,0.62) {bubble end};
+\draw[decorate, decoration={brace, amplitude=2pt, mirror}]
+  (76,-2.32-0.46) -- (86,-2.32-0.46) node[midway, below=1pt, font=\tlsmall] {$m$};
+% Legend.
+\begin{scope}[shift={(0,-3.4)}]
+  \foreach \x/\s/\t in {-17/tl-route/{Router / all-reduce}, 22/tl-exp/{Expert computation},
+                        63/tl-bub/{Bubble (idle)}} {
+    \draw[\s] (\x,0) rectangle (\x+5,0.2);
+    \node[anchor=west, font=\tlsmall] at (\x+6,0.1) {\t};
+  }
+  \foreach \x/\s/\t in {-17/tl-hook/{Slack predictor, open window}, 38/tl-ft/{Chunk of fine-tuning work}} {
+    \draw[\s] (\x,-0.34) rectangle (\x+5,-0.14);
+    \node[anchor=west, font=\tlsmall] at (\x+6,-0.24) {\t};
+  }
+\end{scope}
+\end{tikzpicture}

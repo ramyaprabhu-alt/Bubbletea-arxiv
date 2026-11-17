@@ -1,0 +1,3 @@
+model,lora_state,graph_pool,eager_live,cached,context,total
+Qwen3-30B-A3B,0.1421,2.7207,0.2924,0.3937,1.0996,4.6484
+DeepSeek-V2-Lite,0.0787,1.4994,0.2027,0.2348,0.9922,3.0078

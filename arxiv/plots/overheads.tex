@@ -1,0 +1,82 @@
+\pgfplotstableread[col sep=comma]{plots/CSVs/gpu_memory.csv}\gmtable
+\newcommand{\gmx}{\coordindex + floor(\coordindex/4)}
+\protected\def\gmlabel{%
+  \pgfkeys{/pgf/fpu=true, /pgf/fpu/output format=fixed}%
+  \pgfmathparse{\pgfplotspointmeta}\let\gmv\pgfmathresult
+  \pgfkeys{/pgf/fpu=false}%
+  \ifdim\gmv pt>0pt
+    \pgfmathprintnumber[fixed, fixed zerofill, precision=1]{\gmv}\%%
+  \fi}
+\newcommand{\gmgroup}[2]{%
+  \node[anchor=north, font=\sffamily\scriptsize, yshift=-11.5pt]
+    at ({axis cs:#1,0} |- {rel axis cs:0,0}) {#2};}
+\begin{tikzpicture}
+  \begin{axis}[
+      name=mem,
+      clip mode=individual,
+      bar plot,
+      typeset ticklabels with strut,
+      ybar stacked, /pgf/bar width=9pt, /pgf/bar shift=0pt,
+      enlarge x limits=0.05,
+      width=245pt,
+      ymax=17, ytick={0,5,10,15},
+      xtick={0,1,2,3,5,6,7,8,10,11,12,13},
+      xticklabels={LLMS, \sysshort, EPLB, Both, LLMS, \sysshort, EPLB, Both,
+        LLMS, \sysshort, EPLB, Both},
+      xticklabel style={align=center, font=\sffamily\tiny},
+      xtick style={draw=none},
+      ylabel={GPU memory taken\\(\% of 80\,GB per GPU)},
+      ylabel style={align=center},
+      legend columns=2,
+      legend style={yshift=3pt,
+        /tikz/every even column/.append style={column sep=6pt}},
+    ]
+    \addplot[fill=sysLLMStation, draw=black]
+      table[x expr=\gmx,
+        y expr={mod(\coordindex,4)==0 ? \thisrow{trainer} : 0}]{\gmtable};
+    \addplot[fill=sysBubbleTea, draw=black]
+      table[x expr=\gmx,
+        y expr={mod(\coordindex,4)==0 ? 0 : \thisrow{trainer}}]{\gmtable};
+    \addplot[fill=pastel7, draw=black]
+      table[x expr=\gmx, y=experts]{\gmtable};
+    \addplot[fill=pastel8, draw=black]
+      table[x expr=\gmx, y=other]{\gmtable};
+    \addplot[forget plot, draw=none, fill=none, stacked ignores zero=false,
+      point meta=\thisrow{total},
+      nodes near coords={\gmlabel},
+      every node near coord/.append style={font=\tiny, inner sep=1.5pt,
+        anchor=south}]
+      table[x expr=\gmx, y expr=0]{\gmtable};
+    \addlegendentry{Fine-tuning (LLMStation)}
+    \addlegendentry{Fine-tuning worker (\sys{})}
+    \addlegendentry{EPLB redundant experts}
+    \addlegendentry{Other (buffers, CUDA contexts, mailboxes)}
+    \pgfplotsinvokeforeach{7,8}{
+      \node[rotate=90, anchor=west, font=\sffamily\tiny, text=black!60]
+        at (axis cs:#1,0.3) {n/a};}
+    \gmgroup{1.5}{Qwen3-30B}
+    \gmgroup{6.5}{Qwen1.5-MoE}
+    \gmgroup{11.5}{DS-V2-Lite}
+  \end{axis}
+
+  \begin{axis}[
+      at={($(mem.south east)+(52pt,0)$)}, anchor=south west,
+      width=150pt,
+      xmin=0, xmax=500, ymin=0.95, ymax=1.4,
+      ytick={1,1.1,1.2,1.3,1.4},
+      yticklabel style={/pgf/number format/.cd, fixed, fixed zerofill,
+        precision=1},
+      xlabel={Training step (2 samples/step)},
+      ylabel={Training loss\\(25-step moving avg.)},
+      ylabel style={align=center},
+      legend columns=1,
+      legend style={yshift=3pt},
+    ]
+    \addplot[sysBubbleTea!85!black, thin, no marks]
+      table[col sep=comma, x=step, y=bubbletea]{plots/CSVs/training_loss.csv};
+    \addplot[black!70, thin, densely dashed, no marks]
+      table[col sep=comma, x=step, y=hf_peft]{plots/CSVs/training_loss.csv};
+    \addlegendentry{\sys{} (mean over runs)}
+    \addlegendentry{HF + PEFT trainer alone}
+  \end{axis}
+\end{tikzpicture}

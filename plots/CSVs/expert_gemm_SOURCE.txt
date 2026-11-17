@@ -1,0 +1,26 @@
+expert_gemm_prefill.csv, expert_gemm_decode.csv  ->  Table 2 (tab:phase, sections/characterization/phase.tex)
+
+What: per-layer rank-to-rank expert-GEMM gap, |rank0 - rank1| summed GEMM time
+inside each MoE layer, from a matched pair of torch.profiler traces
+(vllm/benchmarks/moe_gemm_diff.py). Qwen3-30B-A3B, BF16, 2x A100, TP=2, EP=2,
+Triton MoE backend, no load balancing, real arxiv prompts closest to each
+target length. Swept on 2026-09-02.
+
+Source (on the RCP NFS):
+  /mnt/nfs/home/ramya/vllm/bt_logs/gemm_diff_sweep_20260902/
+    prefill 8k        prefill_noLB_8k.json            (results.8k.reps[0])
+    prefill 16k-128k  FINAL_prefill_gemm_diff.json    (noLB_16k ... noLB_128k)
+    decode            FINAL_decode_gemm_diff_us.json  (noLB_1 ... noLB_128)
+  scripts: vllm/benchmarks/gemm_diff_prefill_sweep.py, gemm_diff_decode_sweep.py
+
+Notes:
+- Prefill: one prefill per context length (48 layer windows); the
+  per-context runs for 16k-64k were not kept, only the FINAL aggregate.
+- Decode: steady-state layer windows over 30 generated tokens per batch size;
+  the median gap is 0 us at every batch size, so the table uses mean/p90.
+- Earlier versions of these CSVs held per-rank median GEMM times; Table 2
+  subtracted the two ranks' medians, which cancels most of the gap because the
+  heavier rank alternates between layers (e.g. 3.75 vs 6.80 ms at 128k).
+- Cross-check: the per-layer gap agrees with the measured bubble of Fig. 3
+  (context_bubble_qwen3.csv; bt_logs/char_sweep_qwen3_bf16_v2_20260901),
+  e.g. 6.80 vs 6.41 ms at 128k.

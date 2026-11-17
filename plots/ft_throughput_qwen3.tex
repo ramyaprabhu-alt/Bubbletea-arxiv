@@ -1,0 +1,30 @@
+% body version (single column): Qwen3-30B-A3B only, 4k/16k/32k (full grid: ft_throughput.tex)
+\input{plots/ft_throughput_defs}
+%\begin{groupwidth}{3}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=3 by 1, horizontal sep=6pt,
+        y descriptions at=edge left},
+      bar plot,
+      typeset ticklabels with strut,
+      ybar=0pt, /pgf/bar width=3.5pt,
+      enlarge x limits=0.25,
+      width=67.16pt,
+      title style={yshift=-3pt},
+      xticklabel={\ftticklabel},
+      ylabel style={align=center},
+      ymax=6.5,
+    ]
+
+    \ftpanel{6}{title={4k prompts}, ylabel={FT samples/s}}
+    \ftpanel{12}{title={16k prompts},
+      xlabel={Serving load: low, medium, high (req/s)},
+      % single column: the three entries stack in one row of the column
+      legend columns=-1,
+      legend style={at={(0.4,1.05)}, yshift=14pt, font=\scriptsize,
+        /tikz/every even column/.append style={column sep=3pt}}}
+    \ftlegend
+    \ftpanel{18}{title={32k prompts}}
+  \end{groupplot}
+\end{tikzpicture}
+%\end{groupwidth}
