@@ -1,6 +1,0 @@
-\section{Conclusion}
-\label{sec:conclusion}
-
-Expert-parallel \ac{MoE} serving leaves GPUs idle in a way dense serving does not: routing skew makes lightly loaded GPUs wait for the most-loaded one at every layer, and these \emph{bubbles} persist even after applying load balancing optimizations.
-\sys predicts each GPU's bubble from the router's decision, admits fine-tuning only inside it, and fills it with
-compiler-derived chunks with fine-tuning work.

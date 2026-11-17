@@ -1,5 +1,3 @@
-% appendix: rows FT throughput, p90 TTFT ratio, p90 TPOT ratio; columns
-% 4k/8k/16k prompts (body: latency_ablation_4k.tex)
 \input{plots/latency_ablation_defs}
 \begin{tikzpicture}
   \begin{groupplot}[
@@ -10,14 +8,12 @@
       typeset ticklabels with strut,
       ybar=0pt, /pgf/bar width=4pt,
       enlarge x limits=0.25,
-      % same panel height and bar width as Figs. 7, 8 and 10
       width=62.80pt, height=1.1cm,
       title style={yshift=-3pt},
       xticklabel={\labticklabel},
       ylabel style={align=center},
     ]
 
-    % phantom "0.": one-digit ticks as wide as the 1.5 below, aligning ylabels
     \labpanel{0}{ft}{labft, title={4k prompts}, ylabel={FT\\samples/s},
       yticklabel={\phantom{0.}\axisdefaultticklabel}}
     \labpanel{3}{ft}{labft, title={8k prompts},

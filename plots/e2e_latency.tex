@@ -1,5 +1,3 @@
-% appendix: all models x 1k-32k (body: e2e_latency_qwen3.tex)
-% rows: TTFT for each model, then TPOT for each model
 \input{plots/e2e_latency_defs}
 \begin{tikzpicture}
   \begin{groupplot}[
@@ -37,7 +35,6 @@
     \latpanel{60}{ttft}{}
   \end{groupplot}
 
-  % TPOT block below the TTFT block, with extra space
   \begin{groupplot}[
       group style={group name=tpot, group size=7 by 3, horizontal sep=6pt,
         vertical sep=16pt, y descriptions at=edge left},

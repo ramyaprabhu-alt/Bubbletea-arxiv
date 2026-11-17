@@ -1,8 +1,5 @@
-% body: 8k prompts at 2 and 4 req/s; FT throughput, then p90 TTFT and TPOT
-% in ms (serving alone, serving alone + EPLB, BubbleTea + EPLB)
 \pgfplotstableread[col sep=comma]{plots/CSVs/eplb_8k.csv}\eptable
 \input{plots/eplb_defs}
-% #1 = metric (ttft or tpot)
 \newcommand{\eplatms}[1]{%
   \addplot[forget plot, fill=pastel8, draw=black, /pgf/bar shift=-6pt]
     table[x expr=\coordindex, y=#1_alone]{\eptable};
@@ -16,7 +13,6 @@
 \protected\def\epticklabelk{\pgfmathtruncatemacro{\eprow}{\tick}%
   \pgfplotstablegetelem{\eprow}{req_per_s}\of\eptable
   \pgfmathprintnumber[precision=4]{\pgfplotsretval}}
-%\begin{groupwidth}{3}
 \begin{tikzpicture}
   \begin{groupplot}[
       group style={group size=3 by 1, horizontal sep=40pt},
@@ -56,4 +52,3 @@
     \eplatms{tpot}
   \end{groupplot}
 \end{tikzpicture}
-%\end{groupwidth}

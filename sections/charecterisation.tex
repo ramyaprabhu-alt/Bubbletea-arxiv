@@ -5,7 +5,6 @@ We next characterize expert-parallel bubbles and conclude that they are long eno
 
 \subsection{\ac{MoE} models and load imbalance}
 An \ac{MoE} model replaces the dense feed-forward network in each transformer block with an \ac{MoE} layer, consisting of $E$ experts and a router that sends each token to its top-$k$ experts~\cite{switch,gshard}.
-%We show this process in \Cref{fig:anatomy}.
 Large \acp{MoE} commonly combine \ac{TP} for dense computation with \acf{EP} for the experts.
 \ac{EP} places different experts on different GPUs and routes individual tokens to the GPUs hosting the appropriate expert (\emph{dispatch})~\cite{deepseekv3,vllm-ep-rfc}.
 In a \ac{TP}--\ac{EP} deployment, every GPU observes the same routing decision but executes only its local experts; the expert outputs are then combined across GPUs before the layer computation proceeds (\emph{gather}).
@@ -15,7 +14,6 @@ Because routing is input-dependent, experts receive different numbers of tokens~
 Under \ac{EP}, this results in a per-GPU work imbalance: GPUs hosting more heavily loaded experts finish later, while lightly loaded GPUs finish earlier but cannot proceed as they wait for the processed tokens from other GPUs.
 We call this GPU-local waiting interval a \emph{bubble}.
 Specifically, a bubble is defined as the interval between completion of a GPU's local expert computation and the dependency that allows the computation to proceed.
-%Figure~\ref{fig:anatomy} illustrates this interval;
 We provide additional details on this in \S\ref{sec:appx-arch}.
 
 \Ac{LLM} inference has two phases.
@@ -50,20 +48,9 @@ As we show next, this difference determines whether routing imbalance turns into
 \subsection{The characteristics of bubbles}
 \label{sec:char-obs}
 
-%\paragraph{Measuring bubbles.}
 To understand the characteristics of expert-parallel bubbles and how we can best leverage them, we run three experiments and instrument \ac{MoE} layer execution with CUDA events.
 We measure, for each GPU and layer, the bubble duration.
-%In our \textsc{vLLM} execution path, this interval ends at the tensor-parallel all-reduce.
-For each experiment, we provide key details of the experiment setup, and provide additional details in \S\ref{sec:appx-setup-obs}. % its own model, hardware, workload, and load-balancing configuration.
-
-% \Ac{LLM} inference consists of two phases.
-% During the \emph{prefill} phase, the prompt is processed and the first output token is produced.
-% Its performance is primarily measured by \ac{TTFT}, which is the time from a request's arrival to its first output token.
-% During the \emph{decode} phase, generates subsequent tokens are generated autoregressively, one at a time.
-% %\emph{Decode} generates the remaining tokens one at a time; it is memory-bandwidth-bound, leaves compute
-% Decode performance is characterized with \ac{TPOT}, which is the time between consecutive output tokens.
-% The prefill phase is compute-intensive whereas the decode phase is memory-bandwidth-bound and leaves compute underused~\cite{orca,vllm}.
-% Serving systems enforce \acp{SLO} on both \ac{TTFT} and \ac{TPOT}. \oana{this paragraph feels a bit out of place. suggestion to move after the first paragraph of Sec 2.1. Also it seems a bit disconnected from MoE. It is just a generic description of prefill and decode. I'd adjust it a bit to say what is specific to MoE in prefill/decode.}
+For each experiment, we provide key details of the experiment setup, and provide additional details in \S\ref{sec:appx-setup-obs}.
 
 \paragraph{Observation 1: Prefill creates bubbles we can leverage, and that grow
 with prompt length.}
@@ -73,26 +60,17 @@ with prompt length.}
 Routing imbalance occurs during both prefill and decode, but whether a bubble can be leveraged depends on the resulting \emph{absolute} difference in expert computation time across GPUs.
 We first measure routing skew, which we define as the most-loaded GPU's routed tokens divided by the mean.
 On the \textsc{Qwen3-30B-A3B} model with experts split across two GPUs and no load balancing, and using \textsc{arXiv}-summarization prompts~\cite{cohan-etal-2018-discourse}, we find that this skew is 1.28$\times$ during prefill and 1.75$\times$ during decode.
-%When using prompts in the \textsc{MMLU} dataset~\cite{mmlu}, this skew is 1.26$\times$ and 1.63$\times$, respectively.
 Thus, token imbalance is more pronounced during decode than prefill on this dataset.
 However, because decode expert computation is short, this larger imbalance yields only small bubbles.
-%However, the resulting GPU-time difference tells a different story.
-%During decode, the expert computations are so short that the waiting times between GPUs are too small to schedule meaningful work.
-%On the arXiv-summarization prompts, expert computations during decode are so short that the gap between the two GPUs rarely forms a useful bubble.
-Across batch sizes 1--128 and \textsc{arXiv}-summarization prompts of 32--512 tokens in length, while generating 30 tokens per request, the median bubble duration during decode is \SIrange{5}{25}{\micro\second} per layer. %, and its p90 is at most \SI{42}{\micro\second}.
+Across batch sizes 1--128 and \textsc{arXiv}-summarization prompts of 32--512 tokens in length, while generating 30 tokens per request, the median bubble duration during decode is \SIrange{5}{25}{\micro\second} per layer.
 This is insufficient opportunity to effectively schedule work (in \S\ref{sec:design} we use training chunks of \SI{50}{\micro\second}).
 When performing prefill with \textsc{arXiv}-summarization prompts of length 8k, in contrast, the bubble length is \SI{0.29}{\milli\second} per layer, which is about 14\% of the layer's expert computation time.
-%\emph{Thus, prefill provides much more opportunity to schedule work in bubbles than decode.} 
 \emph{Thus, prefill offers far more opportunities than decode to schedule work in bubbles.}
-%\mv{No MMLU results here?}
 
 The bubble duration during prefill also grows rapidly with the prompt length.
 \Cref{fig:lb-sweep} shows the median bubble duration during prefill, for varying prompt lengths, on the \textsc{DeepSeek-V2-Lite} model, with and without load balancing optimizations.
 In the \emph{Base} configuration (no optimizations), the median per-layer bubble duration increases substantially when increasing prompt length from 8k to 128k tokens.
 The same trend also holds for other \acp{LLM} (\textsc{Qwen3-30B-A3B} and \textsc{Qwen1.5-MoE-A2.7B}, see \S\ref{sec:appx-context}).
-%\oana{name the models explicitly, as you don't say what they are when you introduce the experiment.}
-%(Appendix~).
-%\emph{Thus, longer prompts amplify the opportunity to schedule useful work in bubbles.}
 \emph{Thus, longer prompts create more opportunities to fill bubbles.}
 
 \paragraph{Observation 2: Load balancing optimizations do not eliminate bubbles.}
@@ -101,7 +79,7 @@ The same trend also holds for other \acp{LLM} (\textsc{Qwen3-30B-A3B} and \texts
 We next quantify how much bubble duration remains after applying the following three load balancing optimizations.
 \begin{enumerate*}[label=(\roman*)]
     \item \Ac{EPLB} uses historical expert loads to place experts and replicate hot ones across GPUs~\cite{deepseekv3,eplb}, giving the runtime multiple expert replicas to which tokens can be sent.
-    \item \ac{LPLB}~\cite{lplb} further balances routed tokens across those replicas at dispatch time using linear programming. %\oana{It's weird to just use the abbreviation from the beginning without spelling it out.}.
+    \item \ac{LPLB}~\cite{lplb} further balances routed tokens across those replicas at dispatch time using linear programming.
     \item \waterfill~\cite{waterfill} assigns shared-expert work to the least-loaded GPUs.
 \end{enumerate*}
 \waterfill composes naturally with the other two optimizations: \ac{EPLB} and \ac{LPLB} route tokens to physical expert replicas, then \waterfill balances the shared-expert workload.
@@ -112,7 +90,7 @@ We therefore also consider their combination.
   \inputplot{lb_sweep}
   \caption{
     \textbf{Load balancing optimizations reduce bubbles but do not eliminate them.}
-    The median per-layer bubble duration on \deepseekmoe, 8$\times$H100 GPUs, and with BF16 precision, for prompts with varying lengths, with and without (combinations of) load balancing optimizations.%\mv{Change horizontal axis label to "Prompt length"}
+    The median per-layer bubble duration on \deepseekmoe, 8$\times$H100 GPUs, and with BF16 precision, for prompts with varying lengths, with and without (combinations of) load balancing optimizations.%
   }
   \label{fig:lb-sweep}
 \end{figure}
@@ -121,17 +99,11 @@ We evaluate these mechanisms on the \deepseekmoe \ac{LLM} using the \sglang serv
 \Cref{fig:lb-sweep} shows the median bubble duration across prompt lengths.
 Load balancing reduces the bubble duration substantially compared to \emph{Base} but does not eliminate it.
 With prompt lengths of \SI{128}{k}, \emph{Base} exposes \SI{4.79}{\milli\second\per layer}, while \ac{LPLB}, the most competitive load balancing system, still leaves \SI{3.53}{\milli\second} of idle time per layer.
-%Load balancing also does not come for free: expert replication consumes HBM, while
-%dispatch-time redistribution can increase communication.
 Load balancing is not free either: replicating experts consumes GPU memory, and redistributing tokens at dispatch time can increase communication volume.
 For example, \waterfill raises median dispatch time from \SIrange{2.50}{2.65}{\milli\second\per layer} (\SI{6.0}{\percent}); correspondingly, \ac{LPLB}+\waterfill leaves a \SI{3.76}{\milli\second\per layer} bubble, compared to \SI{3.53}{\milli\second\per layer} with \ac{LPLB} alone.
-%For example, \waterfall raises median dispatch time from 2.50 to 2.65\,ms/layer (6.2\%); correspondingly, \ac{LPLB}+\waterfill leaves a 3.76\,ms/layer bubble, compared to 3.53\,ms/layer with \ac{LPLB} alone.
 \emph{Thus, minimizing token imbalance by itself does not necessarily eliminate bubbles} and these optimizations must
 be weighed against their memory, communication, and runtime overhead.
 Lower-precision execution does not close the gap either: our experiments in \S\ref{sec:appx-fp8} show that FP8 leaves the bubble essentially unchanged relative to BF16.
-%Additionally, we find that lower-precision execution also leaves residual bubbles (Appendix~\ref{sec:appx-fp8}).
-%\sys{} is complementary to these optimizations, reclaiming the per-GPU idle capacity that remains.
-
 
 \paragraph{Observation 3: Serving-level colocation systems miss per-GPU bubbles.}
 \label{sec:gap}
@@ -143,27 +115,7 @@ As the prompt length increases, however, GPU compute saturates quickly~\cite{sar
 The limitation is not simply the granularity of their training work.
 These systems measure slack once per serving iteration, using signals such as batch composition, iteration latency, predicted request latency, or aggregate engine headroom (see \Cref{tab:colocation_systems} in \S\ref{sec:appx-gap}).
 That is reasonable when idle capacity is spread evenly across the GPUs.
-\ac{EP}, however, breaks this: within an \ac{MoE} layer, the iteration as a whole looks saturated because it runs at the pace of its most heavily loaded GPU, while the other GPUs finish their experts early and sit idle waiting for it. 
+\ac{EP}, however, breaks this: within an \ac{MoE} layer, the iteration as a whole looks saturated because it runs at the pace of its most heavily loaded GPU, while the other GPUs finish their experts early and sit idle waiting for it.
 A planner with a single headroom budget per iteration cannot see this per-GPU idle time, so it concludes that prefill has no usable capacity even though substantial bubbles remain on individual GPUs. In a trace-driven experiment, a planner that knows the exact mean bubble of each layer but assigns the same budget to every GPU uses only about 1\% of bubble time, whereas planning per GPU from the current routing decision uses 43--45\% (Appendix~\ref{sec:appx-gap}).
 Thus, \emph{leveraging expert-parallel bubbles requires a different admission signal}.
 The scheduler must estimate slack separately for each GPU at each \ac{MoE} layer, using the current routing decision to determine which GPUs can safely execute work.
-%The scheduler must reason about slack at GPU $\times$ \ac{MoE}-layer granularity and use the current routing decision to determine which GPUs can safely execute useful work.
-
-% The limitation is not simply the granularity of their training work.
-% These systems reason about slack at the level of a serving iteration,
-% using signals such as batch composition, iteration latency, predicted
-% request latency, or aggregate engine headroom
-% (Table~\ref{tab}). This view is appropriate when spare capacity is
-% shared across the GPUs executing an iteration. Expert parallelism
-% breaks that assumption. Within the same \ac{MoE} layer, the serving
-% iteration may be compute-saturated overall while individual GPUs
-% finish their assigned experts early and wait for a more heavily loaded
-% peer. This per-GPU slack is invisible to a planner that assigns a
-% single headroom budget to the iteration. Consequently, existing
-% colocation schedulers can conclude that prefill has no usable capacity
-% even while substantial expert-parallel bubbles remain on individual
-% GPUs.
-
-%Together, these results make bubbles a schedulable resource: they are
-%large, survive serving optimizations, and are predictable per GPU
-%before they occur, but only per-GPU admission can use them. \oana{a bit "fluffy" remove if in need of space.}

@@ -1,16 +1,14 @@
-\pdfminorversion=7 % TeX Live 2025 (Overleaf) defaults to 1.5, below the figure PDFs
+\pdfminorversion=7
 \documentclass{article}
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
-% Figure exports (tikz external) run as accepted, so plots carry no line numbers.
-\ifdefined\tikzexternalrealjob
-  \usepackage[accepted]{mlsys2025}
-\else
-  \usepackage{mlsys2025}
-\fi
+\usepackage[accepted]{mlsys2025}
+\makeatletter
+\renewcommand{\Notice@String}{}
+\makeatother
 \usepackage{multirow}
 \usepackage{tikz}
 \usepackage{amsmath}
@@ -22,20 +20,17 @@
 \usepackage[algo2e,ruled,lined,boxed,commentsnumbered, noend, linesnumbered, procnumbered]{algorithm2e}
 \usepackage{cleveref}
 
-% Numeric-looking citations in running text, as with acmart.
 \renewcommand{\cite}{\citep}
 
-% DOIs in the bibliography link to doi.org (the .bst only \providecommand's \doi).
 \newcommand{\doi}[1]{doi: \href{https://doi.org/#1}{\nolinkurl{#1}}}
 
-% acmart-only commands used in the sections.
 \providecommand{\Description}[1]{}
 
 \usepackage{framed}
 \definecolor{highlightcolor}{RGB}{232, 244, 232}
 \newenvironment{highlight}{\colorlet{shadecolor}{highlightcolor}\begin{shaded}\noindent}{\end{shaded}}
 
-\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage{pifont}%
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 \newcommand{\greencheck}{{\color{OliveGreen}\cmark}}

@@ -1,6 +1,4 @@
-% body version (single column): Qwen3-30B-A3B only, 4k/16k/32k (full grid: e2e_latency.tex)
 \input{plots/e2e_latency_defs}
-%\begin{groupwidth}{3}
 \begin{tikzpicture}
   \begin{groupplot}[
       group style={group size=3 by 2, horizontal sep=6pt,
@@ -13,7 +11,6 @@
 
     \latpanel{6}{ttft}{title={4k prompts}, ylabel={p90 TTFT\\ratio}}
     \latpanel{12}{ttft}{title={16k prompts},
-      % single column: the three entries stack in one row of the column
       legend columns=-1,
       legend style={at={(0.3,1.05)},yshift=14pt, font=\scriptsize,
         /tikz/every even column/.append style={column sep=3pt}}}
@@ -25,4 +22,3 @@
     \latpanel{18}{tpot}{}
   \end{groupplot}
 \end{tikzpicture}
-%\end{groupwidth}

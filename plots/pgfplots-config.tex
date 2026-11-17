@@ -1,4 +1,3 @@
-% palette shared by bar and line plots
 \colorlet{bar1}{black!70}
 \colorlet{bar2}{blue!70!black}
 \colorlet{bar3}{green!55!black}
@@ -6,7 +5,6 @@
 \colorlet{bar5}{violet!70}
 \colorlet{bar6}{orange!85!black}
 
-% pastel palette (ColorBrewer Set2, colorblind-safe)
 \definecolor{pastel1}{HTML}{8DA0CB}
 \definecolor{pastel2}{HTML}{FC8D62}
 \definecolor{pastel3}{HTML}{66C2A5}
@@ -16,28 +14,21 @@
 \definecolor{pastel7}{HTML}{E5C494}
 \definecolor{pastel8}{HTML}{B3B3B3}
 
-% one color per system, shared by all evaluation plots
 \colorlet{sysBubbleTea}{pastel2}
 \colorlet{sysLLMStation}{pastel1}
 \colorlet{sysNaive}{pastel3!70!black}
-% naive colocation by trainer MPS cap, light to dark: 6%, 40%, no cap
 \colorlet{sysNaiveCap}{pastel3!45}
 \colorlet{sysNaive40}{pastel3!75}
 
-% ablation steps (A)-(E) towards BubbleTea: softened Set2 colours not used
-% by the systems above, ending at BubbleTea's own colour
 \colorlet{ladderA}{pastel8}
 \colorlet{ladderB}{pastel7}
 \colorlet{ladderC}{pastel6!50}
 \colorlet{ladderD}{pastel4!65}
 \colorlet{ladderE}{sysBubbleTea}
 
-% Common axis-box height for every data plot: change it here only;
-% a plot sets height= only to deviate from it.
 \newcommand{\plotheight}{1.55cm}
 
 \pgfplotsset{compat=newest,
-    % sizes are those of the axis box; labels come on top
     scale only axis, width=\linewidth-40pt, height=\plotheight,
     every axis/.append style={
      semithick,
@@ -50,7 +41,6 @@
      at={(0.5, 1)},
      font=\small,
     },
-    % line plots: same colors as the bar palette
     cycle list/.define={lines}{
      {bar1},{bar2},{bar3},{bar4},{bar5},{bar6}},
     cycle list name=lines,
@@ -83,7 +73,6 @@
          \draw[##1,/tikz/.cd,yshift=-0.25em]
              (0cm,0cm) rectangle (4pt,6pt);},
     },
-    % bar charts: filled bars outlined in black, thin black error bars
     cycle list/.define={bars}{
      {fill=bar1,draw=black},
      {fill=bar2,draw=black},
@@ -127,5 +116,3 @@
 			\fi
 	}}
 }
-
-

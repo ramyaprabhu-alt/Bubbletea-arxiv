@@ -1,13 +1,9 @@
-% top: arrivals per 10 s bin for each trace; bottom: FT throughput and p90
-% latency (relative to serving alone) per trace
 \pgfplotstableread[col sep=comma]{plots/CSVs/trace_arrivals.csv}\trarrivals
 \pgfplotstableread[col sep=comma]{plots/CSVs/trace_results.csv}\trresults
-% mean arrival rate of trace row #1, for the dashed line
 \pgfplotstablegetelem{0}{mean_req_per_s}\of\trresults
 \let\trmeancode\pgfplotsretval
 \pgfplotstablegetelem{1}{mean_req_per_s}\of\trresults
 \let\trmeanconv\pgfplotsretval
-% #1 = trace column, #2 = mean rate
 \newcommand{\trarrivalpanel}[2]{%
   \addplot[ybar, fill=black!35, draw=none,
     /pgf/bar width=10, /pgf/bar shift=5]
@@ -15,7 +11,6 @@
   \draw[thin, densely dashed] ({rel axis cs:0,0} |- {axis cs:0,#2})
     -- ({rel axis cs:1,0} |- {axis cs:0,#2});
 }
-% #1 = metric (ttft or tpot): p90 latency relative to serving alone
 \newcommand{\trlatpanel}[1]{%
   \addplot[fill=sysLLMStation, draw=black] table[x expr=\coordindex,
     y expr=\thisrow{llmstation_#1}/\thisrow{alone_#1}]{\trresults};
@@ -23,7 +18,6 @@
     y expr=\thisrow{naive40_#1}/\thisrow{alone_#1}]{\trresults};
   \addplot[fill=sysBubbleTea, draw=black] table[x expr=\coordindex,
     y expr=\thisrow{bubbletea_#1}/\thisrow{alone_#1}]{\trresults};
-  % serving alone (dashed) and +10% (dotted)
   \draw[thin, densely dashed] ({rel axis cs:0,0} |- {axis cs:0,1})
     -- ({rel axis cs:1,0} |- {axis cs:0,1});
   \draw[thin, densely dotted] ({rel axis cs:0,0} |- {axis cs:0,1.1})
@@ -39,7 +33,6 @@
       xticklabels={Code, Conv.},
 }}
 
-%5\begin{groupwidth}{3}
 \begin{tikzpicture}
   \begin{groupplot}[
       group style={group name=arr, group size=2 by 1, horizontal sep=10pt,
@@ -59,7 +52,6 @@
   \node[anchor=north, font=\sffamily] at ($(arr c1r1.south east)!0.5!(arr c2r1.south west)
     + (0,-12pt)$) {Seconds into the trace};
 
-  % bottom row, below the legend; same left edge as the arrival panels
   \begin{axis}[trbars, name=ft,
       anchor=north west, at={($(arr c1r1.south west)+(0,-62pt)$)},
       title={Fine-tuning}, ylabel={FT samples/s},
@@ -99,4 +91,3 @@
   \node[anchor=south] at ($(arr c1r1.south west)!0.5!(arr c2r1.south east)
     + (-6pt,-51pt)$) {\pgfplotslegendfromname{trlegend}};
 \end{tikzpicture}
-%\end{groupwidth}

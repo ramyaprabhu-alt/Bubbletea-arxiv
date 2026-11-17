@@ -1,9 +1,4 @@
-% appendix: spare GPU capacity while serving alone, 3 models x 1k-32k
-% CSV (plots/scripts/reshape_capacity.py): rows model-major, then prompt
-% length, then load (high to 1/4 of it); a panel stacks 4 rows
 \pgfplotstableread[col sep=comma]{plots/CSVs/capacity.csv}\captable
-% #1 = first CSV row of the panel, #2 = panel options
-%\begin{groupwidth}{7}
 \newcommand{\cappanel}[2]{%
   \nextgroupplot[#2]
   \addplot[fill=pastel8, draw=black,
@@ -16,8 +11,6 @@
     select coords between index={#1}{\numexpr#1+3\relax}]
     table[x expr=\coordindex, y=bubbles]{\captable};
 }
-% tick label: request rate, read from the CSV row
-% (\protected: pgfplots expands tick labels before typesetting them)
 \protected\def\capticklabel{\pgfmathtruncatemacro{\caprow}{\tick}%
   \pgfplotstablegetelem{\caprow}{req_per_s}\of\captable
   \pgfmathprintnumber[precision=4]{\pgfplotsretval}}
@@ -70,4 +63,3 @@
     \cappanel{80}{}
   \end{groupplot}
 \end{tikzpicture}
-%\end{groupwidth}

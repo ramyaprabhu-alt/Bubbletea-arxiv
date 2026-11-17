@@ -1,7 +1,6 @@
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
 \usepackage{physics}
 \usepackage{enumitem}
-%\usepackage{physics}
 \usepackage{bbm}
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
@@ -9,15 +8,9 @@
 \newtheorem{remark}{Remark}
 \newtheorem{example}{Example}[section]
 \newtheorem{assumption}{Assumption}
-% theorem/lemma/corollary/proposition/conjecture are intentionally NOT
-% declared here: amsart (acmart's base class) already provides them
-% (shared counter, 'acmplain' style) -- redeclaring collides with its
-% own \c@lemma/\c@corollary/\c@proposition/\c@conjecture. None of these
-% environments are currently used in the paper text.
 \DeclareMathOperator*{\argmax}{arg\,max}
 \allowdisplaybreaks
 \newcommand{\leftarrowvert}{\mathrel{\leftarrow\!\!\vert}}
-
 
 \newcommand{\cC}{\mathcal{C}}
 \newcommand{\cO}{\mathcal{O}}
@@ -27,6 +20,6 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\cV}{\mathcal{V}}
 
-\newcommand{\NRM}[1]{{{\left\| #1\right\|}}} % ||1||% Operators
+\newcommand{\NRM}[1]{{{\left\| #1\right\|}}}
 \newcommand{\esp}[1]{\mathbb{E}\left[#1\right]}
 \newcommand{\proba}[1]{\mathbb{P}\left(#1\right)}

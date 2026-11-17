@@ -1,6 +1,4 @@
-% appendix: one panel per prompt length (body: sources_8k.tex)
 \input{plots/sources_defs}
-%\begin{groupwidth}{3}
 \begin{tikzpicture}
   \begin{groupplot}[
       group style={group size=3 by 1, horizontal sep=6pt,
@@ -9,8 +7,6 @@
       typeset ticklabels with strut,
       ybar=0pt, /pgf/bar width=4pt,
       enlarge x limits=0.25,
-      % same panel height and bar spacing as Figs. 7 and 8 (3 bars per
-      % group instead of 4, so 3/4 of their width)
       width=67.38pt,
       title style={yshift=-3pt},
       xticklabel={\srcticklabel},
@@ -30,4 +26,3 @@
     \srcpanel{6}{title={16k prompts}}
   \end{groupplot}
 \end{tikzpicture}
-%\end{groupwidth}

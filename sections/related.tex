@@ -1,17 +1,6 @@
 \section{Related Work}
 \label{sec:related}
 
-% \paragraph{Inference--fine-tuning colocation.}
-% FlexLLM~\cite{flexllm}, LLMStation~\cite{llmstation},
-% Harli~\cite{harli}, and DeltaServe~\cite{deltaserve} colocate
-% latency-critical inference with best-effort fine-tuning by exploiting
-% decode underutilization or serving-level headroom.
-% Appendix~\ref{sec:appx-gap} compares these systems with
-% \sys{} in detail. \sys{} targets complementary capacity: rank-specific
-% slack that appears \emph{inside} expert-parallel prefill, requiring
-% rank-local admission from the current router state rather than only
-% serving-iteration-level signals.
-
 \paragraph{MoE routing and serving optimizations.}
 Load imbalance in sparse \ac{MoE} execution is well known and has been addressed through routing objectives and capacity constraints~\cite{switch,gshard}, expert replication and placement, and
 serving-time mechanisms such as \textsc{EPLB}~\cite{eplb}, \textsc{LPLB}~\cite{lplb}, and \textsc{Waterfill}~\cite{waterfill}.
@@ -20,7 +9,7 @@ serving-time mechanisms such as \textsc{EPLB}~\cite{eplb}, \textsc{LPLB}~\cite{l
 
 \paragraph{Inference--fine-tuning colocation and GPU multiplexing.}
 \flexllm~\cite{flexllm}, \llmstation~\cite{llmstation},
-\harli~\cite{harli}, and \deltaserve~\cite{deltaserve} colocate latency-critical inference with best-effort fine-tuning by exploiting prefill and decode underutilization or serving-level headroom alongside idle periods. 
+\harli~\cite{harli}, and \deltaserve~\cite{deltaserve} colocate latency-critical inference with best-effort fine-tuning by exploiting prefill and decode underutilization or serving-level headroom alongside idle periods.
 \sys instead targets per-GPU slack that appears \emph{inside} expert-parallel prefill, requiring admission from the current router state rather than serving-level signals.
 More broadly, GPU- and LLM-multiplexing systems use temporal sharing, operator interleaving, spatial partitioning, or model-residency management~\cite{gandiva,antman,orion,nvidiamps,nvidiamig,
 muxserve,qlm,serverlessllm,aegaeon,prism}.

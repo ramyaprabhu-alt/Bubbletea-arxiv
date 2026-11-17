@@ -1,9 +1,3 @@
-% Background figure (sections/appendix_char.tex, fig:appx-arch): dense vs.
-% MoE layer on two GPUs. Time runs downward inside each GPU; box heights are
-% illustrative (expert boxes: 0.2 cm per routed token), not measured. With
-% TP=EP (our vLLM path) every GPU holds all tokens, so expert outputs are
-% combined by the TP all-reduce, not an all-to-all. Fills match
-% Fig. design_example (experts black!25, all-reduce black!10, bubble hatched).
 \tikzset{
   ab/gpu/.style={draw=black!45, dashed, rounded corners=1.5pt},
   ab/blk/.style={draw=black!70, inner sep=0pt},
@@ -17,11 +11,8 @@
   ab/tok/.style={fill=black!75, draw=none},
 }
 \begin{tikzpicture}[x=1cm, y=1cm]
-% Box with a centred label: \abbox{style}{x0}{y0}{x1}{y1}{label}
 \newcommand{\abbox}[6]{\draw[#1] (#2,#3) rectangle (#4,#5)
   node[midway, ab/lbl] {#6};}
-% One panel's GPU frames, labels and shared blocks; GPU 0 spans
-% [#1, #1+1.5], GPU 1 [#1+1.65, #1+3.15].
 \newcommand{\abpanel}[1]{%
   \foreach \g/\dx in {0/0, 1/1.65} {
     \draw[ab/gpu] (#1+\dx,0.12) rectangle (#1+\dx+1.5,-2.68);
@@ -30,35 +21,29 @@
   }
   \abbox{ab/ar}{#1+0.1}{-0.68}{#1+3.05}{-0.86}{all-reduce}
   \abbox{ab/ar}{#1+0.1}{-2.58}{#1+3.05}{-2.76}{all-reduce}}
-% Expert box with token squares: \abexp{x0}{y_top}{n_tokens}{label}
 \newcommand{\abexp}[4]{%
   \draw[ab/ffn] (#1,#2) rectangle (#1+1.3,#2-0.2*#3);
   \node[ab/lbl, anchor=west] at (#1+0.04,#2-0.1) {#4};
   \foreach \i in {1,...,#3}
     \fill[ab/tok] ({#1+0.32+(\i-1)*0.1},#2-0.135) rectangle ++(0.07,0.07);}
 
-% Time axis, shared by both panels.
 \draw[-{Stealth[length=3pt]}, black!60] (0.12,-0.18) -- (0.12,-2.76);
 \node[ab/lbl, black!60, rotate=90, anchor=south] at (0.06,-1.47) {time};
 
-%% (a) Dense layer, TP = 2 --------------------------------------------------
 \node[ab/title] at (0.3,0.22) {(a) Dense, TP\,=\,2};
 \abpanel{0.3}
 \foreach \dx in {0, 1.65}
   \abbox{ab/ffn}{0.4+\dx}{-0.92}{1.7+\dx}{-2.52}{FFN shard}
 \node[ab/lbl, black!60, anchor=north] at (1.875,-2.82) {same work on every GPU: no waiting};
 
-%% (b) MoE layer, TP = EP = 2 ----------------------------------------------
 \node[ab/title] at (3.95,0.22) {(b) MoE, TP\,=\,EP\,=\,2};
 \abpanel{3.95}
 \foreach \dx in {0, 1.65}
   \abbox{ab/rtr}{4.05+\dx}{-0.92}{5.35+\dx}{-1.08}{router}
-% GPU 0: E1 (2 tokens) + E2 (1 token), then the bubble until the all-reduce.
 \abexp{4.05}{-1.12}{2}{E1}
 \abexp{4.05}{-1.52}{1}{E2}
 \draw[ab/bub] (4.05,-1.72) rectangle (5.35,-2.52);
 \node[ab/lbl, fill=white] at (4.70,-2.12) {\textbf{bubble}};
-% GPU 1: E3 (4 tokens) + E4 (3 tokens).
 \abexp{5.70}{-1.12}{4}{E3}
 \abexp{5.70}{-1.92}{3}{E4}
 \node[ab/lbl, black!60, anchor=north] at (5.525,-2.82) {uneven expert work: GPU 0 waits};

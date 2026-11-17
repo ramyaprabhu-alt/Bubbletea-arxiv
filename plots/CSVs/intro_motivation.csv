@@ -1,4 +1,0 @@
-config,label,dispatch,gemm,bubble,total,bubble_pct,bubble_median
-base,No balancing,2.54,3.06,5.56,11.16,50,4.79
-eplb,EPLB,2.53,3.06,5.11,10.69,48,4.83
-lplb,LPLB,2.50,3.07,3.65,9.23,40,3.53

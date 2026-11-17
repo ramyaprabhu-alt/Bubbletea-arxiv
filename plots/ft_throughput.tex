@@ -1,6 +1,4 @@
-% appendix: all models x 1k-32k (body: ft_throughput_qwen3.tex)
 \input{plots/ft_throughput_defs}
-%\begin{groupwidth}{7}
 \begin{tikzpicture}
   \begin{groupplot}[
       group style={group size=7 by 3, horizontal sep=6pt,
@@ -15,7 +13,6 @@
       ylabel style={align=center},
     ]
 
-    % phantom digit: one-digit ticks as wide as the rows below, aligning ylabels
     \ftpanel{0}{title={1k prompts}, ymax=6.5, ylabel={Qwen3-30B\\FT samples/s},
       yticklabel={\phantom{0}\axisdefaultticklabel}}
     \ftpanel{3}{title={2k prompts}, ymax=6.5}
@@ -46,4 +43,3 @@
     \ftpanel{60}{ymax=10}
   \end{groupplot}
 \end{tikzpicture}
-%\end{groupwidth}

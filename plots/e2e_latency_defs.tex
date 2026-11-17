@@ -1,8 +1,4 @@
-% shared by e2e_latency.tex (all models, appendix) and e2e_latency_qwen3.tex (body)
-% CSV (plots/scripts/make_e2e_csvs.py): rows model-major, then prompt length
-% (1k-32k), then load; a panel plots 3 rows (low, medium, high load)
 \pgfplotstableread[col sep=comma]{plots/CSVs/e2e_latency.csv}\lattable
-% value printed beside bars clipped at the top of the axis (> 2x)
 \protected\def\latcliplabel{%
   \pgfkeys{/pgf/fpu=true, /pgf/fpu/output format=fixed}%
   \pgfmathparse{\pgfplotspointmeta}\let\latv\pgfmathresult
@@ -14,8 +10,6 @@
       \pgfmathprintnumber[fixed, precision=0]{\latv}%
     \fi$\times$%
   \fi}
-% #1 = first CSV row of the panel, #2 = metric (ttft or tpot),
-% #3 = panel options
 \newcommand{\latpanel}[3]{%
   \nextgroupplot[#3]
   \addplot[fill=sysLLMStation, draw=black,
@@ -32,43 +26,33 @@
     table[x expr=\coordindex, y=bubbletea_#2]{\lattable};
   \latrefs
 }
-% serving alone (dashed) and +10% (dotted)
 \newcommand{\latrefs}{%
   \draw[thin, densely dashed] ({rel axis cs:0,0} |- {axis cs:0,1})
     -- ({rel axis cs:1,0} |- {axis cs:0,1});
   \draw[thin, densely dotted] ({rel axis cs:0,0} |- {axis cs:0,1.1})
     -- ({rel axis cs:1,0} |- {axis cs:0,1.1});}
-% legend entries, in plot order
 \newcommand{\latlegend}{%
   \addlegendentry{LLMStation}
   \addlegendentry{\Uncoord (40\% cap)}
   \addlegendentry{\sys{}}}
-% tick label: request rate, read from the CSV row
-% (\protected: pgfplots expands tick labels before typesetting them)
 \protected\def\latticklabel{\pgfmathtruncatemacro{\latrow}{\tick}%
   \pgfplotstablegetelem{\latrow}{req_per_s}\of\lattable
   \pgfmathprintnumber[precision=2]{\pgfplotsretval}}
-% shared by the TTFT and TPOT blocks
 \pgfplotsset{latgrid/.style={
       bar plot,
       typeset ticklabels with strut,
       ybar=0pt, /pgf/bar width=4pt,
       enlarge x limits=0.25,
-      %width=85pt,
       title style={yshift=-3pt},
       ymin=0.6, ymax=2, ytick={1,1.5,2},
-      % bars above 2x stop at the top of the axis, value printed beside
       restrict y to domain*=0:2,
       nodes near coords={\latcliplabel},
       every node near coord/.append style={font=\tiny, rotate=90,
         inner xsep=0.5pt, inner ysep=2.5pt},
-      % rotated labels sit beside the bar, left or right of its top
       label left/.style={every node near coord/.append style={
         anchor=south east}},
       label right/.style={every node near coord/.append style={
         anchor=north east}},
-      % Uncoord's side; a panel sets naive label/.style={label right}
-      % when the LLMStation bar is clipped too
       naive label/.style={label left},
       xticklabel={\latticklabel},
       ylabel style={align=center},

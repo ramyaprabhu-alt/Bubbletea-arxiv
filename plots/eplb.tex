@@ -1,8 +1,5 @@
-% appendix: rows FT throughput, p90 TTFT ratio, p90 TPOT ratio; bar group k
-% plots CSV row k (prompt length x request rate; medium load, then high load)
 \pgfplotstableread[col sep=comma]{plots/CSVs/eplb.csv}\eptable
 \input{plots/eplb_defs}
-%\begin{groupwidth}{1}
 \begin{tikzpicture}
   \begin{groupplot}[
       group style={group size=1 by 3, vertical sep=6pt,
@@ -17,7 +14,6 @@
       ylabel style={align=center},
     ]
 
-    % phantom "0.": one-digit ticks as wide as the 1.4 below, aligning ylabels
     \nextgroupplot[ylabel={FT\\samples/s}, ymax=7.5, ytick={0,2,4,6},
       yticklabel={\phantom{0.}\axisdefaultticklabel},
       legend columns=3, legend style={yshift=3pt, xshift=-12pt,
@@ -51,4 +47,3 @@
     \epgroup{4}{High load}
   \end{groupplot}
 \end{tikzpicture}
-%\end{groupwidth}
