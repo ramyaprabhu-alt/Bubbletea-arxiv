@@ -91,7 +91,7 @@ Thus, even on production traces, \sys achieves superior fine-tuning throughput w
 \begin{figure}[t]
   \centering
   \inputplot{sources_8k}
-  \caption{Fine-tuning throughput for \emph{decode colocation} (coarse-grained work scheduling), \sys-\textsc{Flat} (fine-grained work scheduling but not within bubbles), and \sys on \textsc{Qwen3-30B-A3B} with prompts of 8k length across serving loads.}
+  \caption{Fine-tuning throughput for \emph{decode colocation} (coarse-grained work scheduling), \textsc{Tea} (fine-grained work scheduling but not within bubbles), and \sys on \textsc{Qwen3-30B-A3B} with prompts of 8k length across serving loads.}
   \label{fig:eval-sources}
 \end{figure}
 
@@ -100,14 +100,14 @@ Thus, even on production traces, \sys achieves superior fine-tuning throughput w
 
 Next, we investigate where the fine-tuning throughput in \sys comes from.
 \Cref{fig:eval-sources} shows fine-tuning throughput for varying serving loads, and for different colocation mechanisms, while using prompts with length 8k.
-We first compare \emph{\cfgColo}, which uses \llmstation-like scheduling at the granularity of an iteration, with a version of \sys, named \sys-\textsc{Flat}, that schedules work at finer granularity but does not schedule work in bubbles.
+We first compare \emph{\cfgColo}, which uses \llmstation-like scheduling at the granularity of an iteration, with a version of \sys, named \textsc{Tea}, that schedules work at finer granularity but does not schedule work in bubbles.
 This comparison  isolates the benefit of \sys's fine-grained scheduling while holding the available serving capacity fixed to conventional decode and idle-time headroom.
 
-\sys-\textsc{Flat} improves fine-tuning throughput by 36--60\% over \emph{\cfgColo}, with improvements more pronounced in the low load regime.
-This highlights that \emph{the fine-grained scheduling mechanism in \sys is able to significantly increase fine-tuning throughput compared to conventional approaches.} \sys-\textsc{Flat} keeps p90 \ac{TTFT} and \ac{TPOT} within 10\% of serving alone in most configurations.
+\textsc{Tea} improves fine-tuning throughput by 36--60\% over \emph{\cfgColo}, with improvements more pronounced in the low load regime.
+This highlights that \emph{the fine-grained scheduling mechanism in \sys is able to significantly increase fine-tuning throughput compared to conventional approaches.} \textsc{Tea} keeps p90 \ac{TTFT} and \ac{TPOT} within 10\% of serving alone in most configurations.
 
-Next, we compare the fine-tuning throughput of \sys-\textsc{Flat} with that of \sys that additionally schedules fine-tuning work in bubbles.
-\Cref{fig:eval-sources} shows that at a medium and high load, \sys achieves 24\% and 27\% higher throughput, respectively, compared to \sys-\textsc{Flat}.
+Next, we compare the fine-tuning throughput of \textsc{Tea} with that of \sys that additionally schedules fine-tuning work in bubbles.
+\Cref{fig:eval-sources} shows that at a medium and high load, \sys achieves 24\% and 27\% higher throughput, respectively, compared to \textsc{Tea}.
 This is because with higher load, there are more abundant bubbles during prefill which \sys effectively leverages.
 At low load, where conventional headroom is abundant, leveraging bubbles does not help, and slightly diminishes throughput by 3\%.
 We attribute this decrease to the additional overhead required by the \sys scheduling mechanism.
@@ -125,7 +125,7 @@ This maximizes the amount of training exposed inside prefill, but can compete fo
 \begin{figure}[t]
   \centering
   \inputplot{latency_ablation_4k}
-  \caption{Fine-tuning throughput (left), p90 \ac{TTFT} (middle) and p90 \ac{TPOT} (right) relative to serving alone, for \sys-\textsc{Flat}, \emph{unconstrained scheduling}, \emph{constrained scheduling}, and \sys on \textsc{Qwen3-30B-A3B} with 4k prompts across serving loads. The dashed line marks serving alone and the dotted line a 10\% increase.}
+  \caption{Fine-tuning throughput (left), p90 \ac{TTFT} (middle) and p90 \ac{TPOT} (right) relative to serving alone, for \textsc{Tea}, \emph{unconstrained scheduling}, \emph{constrained scheduling}, and \sys on \textsc{Qwen3-30B-A3B} with 4k prompts across serving loads. The dashed line marks serving alone and the dotted line a 10\% increase.}
   \label{fig:eval-latency-ablation}
 \end{figure}
 
@@ -134,7 +134,7 @@ Second, the two fine-tuning chains run concurrently only while prefill takes les
 Third, prefills shorter than 4k tokens are skipped because their bubbles are too small to justify admission.
 Fourth, each GPU stops admitting new chunks a margin $m$ before its bubble ends (\emph{early close}), so that no running chunk delays the all-reduce (\S\ref{sec:design-optC}).
 
-\Cref{fig:eval-latency-ablation} shows that at a high load, \emph{unconstrained scheduling} increases fine-tuning throughput from 0.73 to 2.11 samples/s compared to \sys-\textsc{Flat}, but p90 \ac{TTFT} increases to 5.03$\times$ serving alone and p90 \ac{TPOT} to 1.19$\times$.
+\Cref{fig:eval-latency-ablation} shows that at a high load, \emph{unconstrained scheduling} increases fine-tuning throughput from 0.73 to 2.11 samples/s compared to \textsc{Tea}, but p90 \ac{TTFT} increases to 5.03$\times$ serving alone and p90 \ac{TPOT} to 1.19$\times$.
 Fine-tuning that reaches the serving-critical GPU extends the prefill and can queue subsequent requests.
 Exposing intra-layer capacity is therefore not sufficient; admission must avoid interfering with the critical path.
 \emph{Constrained scheduling} reduces p90 \ac{TTFT} to 1.03$\times$ and p90 \ac{TPOT} to 1.13$\times$, while retaining 1.33 samples/s.
@@ -148,7 +148,7 @@ Constrained scheduling, however, can still admit fine-tuning work on the most-lo
 \begin{figure}[t]
   \centering
   \inputplot{eplb_8k}
-  \caption{Fine-tuning throughput (left), p90 \ac{TTFT} (middle) and p90 \ac{TPOT} (right) on \textsc{Qwen3-30B-A3B} with prompts of 8k length at medium (2 requests/s) and high (4 requests/s) serving load. Left: each bar shows the throughput of \sys-\textsc{Flat}, with the additional throughput of \sys from bubble filling stacked on top; labels give the gain from bubble filling. Middle and right: latency of serving alone without and with \ac{EPLB}, and of  \sys with \ac{EPLB}.}
+  \caption{Fine-tuning throughput (left), p90 \ac{TTFT} (middle) and p90 \ac{TPOT} (right) on \textsc{Qwen3-30B-A3B} with prompts of 8k length at medium (2 requests/s) and high (4 requests/s) serving load. Left: each bar shows the throughput of \textsc{Tea}, with the additional throughput of \sys from bubble filling stacked on top; labels give the gain from bubble filling. Middle and right: latency of serving alone without and with \ac{EPLB}, and of  \sys with \ac{EPLB}.}
   \label{fig:eval-eplb}
 \end{figure}
 
@@ -159,16 +159,16 @@ We next ask whether \sys remains useful when serving already uses an expert load
 We use \vllm's \ac{EPLB}, a load-balancing  mechanism that periodically replicates and re-places experts across GPUs based on their observed load, so that each GPU receives a more even share of expert work.
 We enable it on \textsc{Qwen3-30B-A3B} with 16 redundant experts.
 Across our workloads, \ac{EPLB} reduces the fraction of prefill spent in bubbles from 11--17\% to 8--13\%.
-Because \ac{EPLB} also changes how much decode and idle-time headroom serving leaves, we break down the contribution of placing fine-tuning in decode and idle time with \sys-\textsc{Flat}, and in the bubbles with \sys.
+Because \ac{EPLB} also changes how much decode and idle-time headroom serving leaves, we break down the contribution of placing fine-tuning in decode and idle time with \textsc{Tea}, and in the bubbles with \sys.
 
 \Cref{fig:eval-eplb} shows the results for 8k-token prompts at medium and high load.
-At high load and across prompt lengths, bubble filling increases fine-tuning throughput over \sys-\textsc{Flat} by 12--23\% with \ac{EPLB}, compared to 27--37\% without it.
+At high load and across prompt lengths, bubble filling increases fine-tuning throughput over \textsc{Tea} by 12--23\% with \ac{EPLB}, compared to 27--37\% without it.
 This is because \ac{EPLB} balances expert load averaged over recent steps, while the routing of each individual prefill still deviates from that average, so some GPUs still finish their experts early in every layer.
 At high load, where decode and idle-time headroom is scarce, these residual bubbles are the main remaining source of fine-tuning capacity.
 p90 \ac{TTFT} and \ac{TPOT} stay within 7\% of serving alone.
 
 At medium load, bubble filling changes fine-tuning throughput by $-2$ to $+0.5$\%.
-As expected, decode and idle-time headroom is plentiful at this load, and \sys-\textsc{Flat} already uses it.
+As expected, decode and idle-time headroom is plentiful at this load, and \textsc{Tea} already uses it.
 The only workload where latency exceeds 7\% is also at medium load: at 16k-token prompts and 1 request/s, p90 \ac{TPOT} reaches 1.32$\times$ serving alone (Appendix~\ref{sec:appx-eplb}).
 This suggests \sys should leave residual bubbles unused when conventional headroom already suffices.
 
