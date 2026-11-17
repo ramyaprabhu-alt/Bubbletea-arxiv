@@ -6,8 +6,12 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
 \usepackage[accepted]{mlsys2025}
+\usepackage{etoolbox}
 \makeatletter
 \renewcommand{\Notice@String}{}
+\patchcmd{\printAffiliationsAndNotice}{\ \\ \Notice@String}{}{}{\PackageWarning{header}{affiliation notice patch failed}}
+\hypersetup{pdfsubject={}}
+\AtBeginDocument{\chead{\small\bf\@mlsystitlerunning}}
 \makeatother
 \usepackage{multirow}
 \usepackage{tikz}
